@@ -1,6 +1,13 @@
+import random
+import string
+import time
+
 import psycopg2
 import pymongo
 import redis
+
+CATEGORIES = ['Books', 'Toys', 'Furniture', 'Clothing', 'Electronics',
+              'Housewares', 'Tools', 'Groceries', 'Outdoors', 'Decor']
 
 class Bench(object):
     def create(self):
@@ -99,15 +106,32 @@ class PostgresBench(Bench):
     def get_by_category(self, category):
         cur = self.client.cursor()
         cur.execute("SELECT * FROM querybench WHERE category=%s", (category,))
-        return cur.fetchmany()
+        return cur.fetchall()
 
 def main():
-    bench = PostgresBench()
-    bench.create()
-    bench.insert(1, {'name': 'Foo', 'category': 'Bar'})
-    print bench.get_by_id(1)
-    print bench.get_by_category('Bar')
-    bench.drop()
+    random.shuffle(CATEGORIES)
+
+    for cls in [RedisBench, MongoBench, PostgresBench]:
+        bench = cls()
+        bench.create()
+
+        for i in range(1, 100000):
+            name = ''.join(random.choice(string.ascii_uppercase)
+                    for _ in range(50))
+            bench.insert(i, {'name': name,
+                             'category': CATEGORIES[i % len(CATEGORIES)]})
+
+        start = time.time()
+        for i in range(100):
+            bench.get_by_id(random.randint(1, 100000))
+        print cls.__name__, 'ID', time.time() - start
+
+        start = time.time()
+        for i in range(100):
+            bench.get_by_category(CATEGORIES[i % len(CATEGORIES)])
+        print cls.__name__, 'CAT', time.time() - start
+
+        bench.drop()
 
 if __name__ == '__main__':
     main()
