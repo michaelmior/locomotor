@@ -6,6 +6,8 @@ import psycopg2
 import pymongo
 import redis
 
+NUM_ITEMS = 100000
+NUM_ITERATIONS = 100
 CATEGORIES = ['Books', 'Toys', 'Furniture', 'Clothing', 'Electronics',
               'Housewares', 'Tools', 'Groceries', 'Outdoors', 'Decor']
 
@@ -37,13 +39,13 @@ class RedisBench(Bench):
         self.client.flushdb()
 
     def get_by_id(self, key):
-        return self.client.hgetall('item:' + str(key))
+        return self.client.hget('item:' + str(key), 'name')
 
     def get_by_category(self, category):
         ids = self.client.lrange('category:' + category, 0, -1)
         items = []
         for id in ids:
-            items.append(self.client.hgetall('item:' + str(id)))
+            items.append(self.client.hget('item:' + str(id), 'name'))
 
         return items
 
@@ -63,10 +65,10 @@ class MongoBench(Bench):
         self.client.insert_one(values)
     
     def get_by_id(self, key):
-        return self.client.find_one({'_id': key})
+        return self.client.find_one({'_id': key}, ['name'])
 
     def get_by_category(self, category):
-        return list(self.client.find({'category': category}))
+        return list(self.client.find({'category': category}, ['name']))
 
 class PostgresBench(Bench):
     def __init__(self):
@@ -100,12 +102,12 @@ class PostgresBench(Bench):
 
     def get_by_id(self, key):
         cur = self.client.cursor()
-        cur.execute("SELECT * FROM querybench WHERE id=%s", (key,))
+        cur.execute("SELECT name FROM querybench WHERE id=%s", (key,))
         return cur.fetchone()
 
     def get_by_category(self, category):
         cur = self.client.cursor()
-        cur.execute("SELECT * FROM querybench WHERE category=%s", (category,))
+        cur.execute("SELECT name FROM querybench WHERE category=%s", (category,))
         return cur.fetchall()
 
 def main():
@@ -115,19 +117,21 @@ def main():
         bench = cls()
         bench.create()
 
-        for i in range(1, 100000):
+        start = time.time()
+        for i in range(1, NUM_ITEMS + 1):
             name = ''.join(random.choice(string.ascii_uppercase)
                     for _ in range(50))
             bench.insert(i, {'name': name,
                              'category': CATEGORIES[i % len(CATEGORIES)]})
+        print cls.__name__, 'IN', time.time() - start
 
         start = time.time()
-        for i in range(100):
-            bench.get_by_id(random.randint(1, 100000))
+        for i in range(NUM_ITERATIONS):
+            bench.get_by_id(random.randint(1, NUM_ITEMS))
         print cls.__name__, 'ID', time.time() - start
 
         start = time.time()
-        for i in range(100):
+        for i in range(NUM_ITERATIONS):
             bench.get_by_category(CATEGORIES[i % len(CATEGORIES)])
         print cls.__name__, 'CAT', time.time() - start
 
