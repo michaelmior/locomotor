@@ -18,14 +18,14 @@ class Iter(object):
 
 def redis_server(func):
     code = byteplay.Code.from_code(func.func_code)
-    client_arg, keys = code.args
+    client_arg, arg_names = code.args
 
     stack = []
     for c in code.code:
         # Add the variable to the stack
         if c[0] == byteplay.LOAD_FAST:
-            if c[1] == keys:
-                stack.append('KEYS')
+            if c[1] in arg_names:
+                stack.append('ARGV[%d]' % (arg_names.index(c[1]) + 1))
             else:
                 stack.append(c[1])
 
@@ -119,18 +119,19 @@ def redis_server(func):
         if line.endswith(' do'):
             indent += 1
 
+    print(lua_code)
     func.script = None
-    def inner(client, keys):
+    def inner(client, *args):
         if func.script is None:
             func.script = client.register_script(lua_code)
 
-        return func.script(keys)
+        return func.script(args=args)
 
     return inner
 
 @redis_server
-def get_by_category(client, categories):
-    ids = client.lrange('category:' + categories[0], 0, -1)
+def get_by_category(client, category):
+    ids = client.lrange('category:' + category, 0, -1)
     items = []
     for id in ids:
         items.append(client.hget(id, 'name'))
@@ -139,6 +140,6 @@ def get_by_category(client, categories):
 client = redis.StrictRedis()
 client.hmset('item:1', { 'name': 'Foo', 'category': 'Bar' })
 client.lpush('category:Bar', 'item:1')
-print(get_by_category(client, ['Bar']))
+print(get_by_category(client, 'Bar'))
 client.script_flush()
 client.flushall()
