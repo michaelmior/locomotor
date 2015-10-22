@@ -1,3 +1,4 @@
+byteplay==0.2
 psycopg2==2.6.1
 pymongo==3.0.3
 redis==2.10.3
