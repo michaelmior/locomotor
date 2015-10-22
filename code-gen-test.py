@@ -192,6 +192,12 @@ def hincrex(client, key, field):
     if client.hexists(key, field) == 1:
         return client.hincrby(key, field, 1)
 
+@redis_server
+def add_link(client, url):
+    link_id = client.incr('counter')
+    client.hset('links', link_id, url)
+    return link_id
+
 client = redis.StrictRedis()
 
 print(increx(client, 'foo'))
@@ -205,6 +211,9 @@ print(hincrex(client, 'bar', 'baz'))
 client.hmset('item:1', { 'name': 'Foo', 'category': 'Bar' })
 client.lpush('category:Bar', 'item:1')
 print(get_by_category(client, 'Bar'))
+
+print(add_link(client, 'foo'))
+print(add_link(client, 'foo'))
 
 client.script_flush()
 client.flushall()
