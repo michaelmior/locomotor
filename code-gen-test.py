@@ -29,7 +29,8 @@ class If(object):
 
 def redis_server(func):
     code = byteplay.Code.from_code(func.func_code)
-    client_arg, arg_names = code.args
+    client_arg = code.args[0]
+    arg_names = code.args[1:]
 
     stack = []
     for c in code.code:
@@ -186,11 +187,20 @@ def increx(client, key):
     if client.exists(key) == 1:
         return client.incr(key)
 
+@redis_server
+def hincrex(client, key, field):
+    if client.hexists(key, field) == 1:
+        return client.hincrby(key, field, 1)
+
 client = redis.StrictRedis()
 
 print(increx(client, 'foo'))
 client.set('foo', 1)
 print(increx(client, 'foo'))
+
+print(hincrex(client, 'bar', 'baz'))
+client.hset('bar', 'baz', 1)
+print(hincrex(client, 'bar', 'baz'))
 
 client.hmset('item:1', { 'name': 'Foo', 'category': 'Bar' })
 client.lpush('category:Bar', 'item:1')
