@@ -5,6 +5,8 @@ import redis
 def argstr(arg):
     if type(arg) == str:
         return "'%s'" % arg
+    elif arg is None:
+        return 'nil'
     else:
         return str(arg)
 
@@ -15,6 +17,15 @@ class Iter(object):
 
     def __repr__(self):
         return 'Iter(%s)' % str(self.val)
+
+# Simple sentinel class used to signal conditions
+class If(object):
+    def __init__(self, val, label):
+        self.val = val
+        self.label = label
+
+    def __repr__(self):
+        return 'If(%s, %s)' % (str(self.val), str(self.label))
 
 def redis_server(func):
     code = byteplay.Code.from_code(func.func_code)
@@ -71,11 +82,18 @@ def redis_server(func):
                 stack.append("table.insert(%s, %s)" % (fn[0], ', '.join(args)))
             else:
                 # XXX Not supported
-                raise
+                raise Exception()
 
         # Either store a value to a variable or start iterating
         elif c[0] == byteplay.STORE_FAST:
             val = stack.pop()
+
+            # Put labels back on the stack
+            if type(val) == byteplay.Label:
+                label = val
+                val = stack.pop()
+                stack.append(label)
+
             if type(val) == Iter:
                 # We popped an iterator, so we must be preparing to iterate
                 # This assumes the following bytecode structure for loops
@@ -110,16 +128,42 @@ def redis_server(func):
         elif c[0] == byteplay.RETURN_VALUE:
             stack.append('return %s' % stack.pop())
 
+        # Push an If onto the stack that we deal with later during output
+        elif c[0] == byteplay.POP_JUMP_IF_FALSE:
+            stack.append(If(stack.pop(), c[1]))
+
+        # Push labels so we can do proper code gen for conditions
+        elif type(c[0]) == byteplay.Label:
+            stack.append(c[0])
+
+        # Generate code for boolean comparisons
+        elif c[0] == byteplay.COMPARE_OP:
+            arg2, arg1 = stack.pop(), stack.pop()
+            stack.append('%s %s %s' % (arg1, c[1], arg2))
+
+    if_labels = []
     lua_code = ''
     indent = 0
     for line in stack:
+        # We found a condition so store the label so we know when to end
+        if type(line) == If:
+            if_labels.append(line.label)
+            line = 'if %s then' % line.val
+
+        # Remove the label and end the block if this was a condition
+        if type(line) == byteplay.Label:
+            if line in if_labels:
+                if_labels.remove(line)
+                line = 'end'
+            else:
+                continue
+
         if line == 'end':
             indent -= 1
         lua_code += '    ' * indent + line + '\n'
-        if line.endswith(' do'):
+        if line.endswith(' do') or line.startswith('if '):
             indent += 1
 
-    print(lua_code)
     func.script = None
     def inner(client, *args):
         if func.script is None:
@@ -137,9 +181,20 @@ def get_by_category(client, category):
         items.append(client.hget(id, 'name'))
     return items
 
+@redis_server
+def increx(client, key):
+    if client.exists(key) == 1:
+        return client.incr(key)
+
 client = redis.StrictRedis()
+
+print(increx(client, 'foo'))
+client.set('foo', 1)
+print(increx(client, 'foo'))
+
 client.hmset('item:1', { 'name': 'Foo', 'category': 'Bar' })
 client.lpush('category:Bar', 'item:1')
 print(get_by_category(client, 'Bar'))
+
 client.script_flush()
 client.flushall()
