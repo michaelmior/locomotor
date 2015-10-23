@@ -1,168 +1,127 @@
 import byteplay
+import inspect
+import compiler
 
-# Convert arguments to their string values (right now just quotes constants)
-def argstr(arg):
-    if type(arg) == str:
-        return "'%s'" % arg
-    elif arg is None:
-        return 'nil'
+TAB = '  '
+
+# Generate code for a single node at a particular indentation level
+def process_node(node, arg_names, indent=0):
+    code = ''
+
+    if node.__class__ == compiler.ast.Stmt:
+        for n in node.getChildNodes():
+            code += process_node(n, arg_names, indent)
+    elif node.__class__ == compiler.ast.Assign:
+        value = process_node(node.expr, arg_names, indent).strip()
+
+        for var in node.nodes:
+            code += TAB * indent + 'local %s = %s\n' % (var.name, value)
+    elif node.__class__ == compiler.ast.List:
+        code = TAB * indent + '{' + \
+            ', '.join(process_node(n, arg_names) for n in node.nodes) + '}'
+    elif node.__class__ == compiler.ast.Return:
+        code = TAB * indent + 'return ' + process_node(node.value, arg_names)
+    elif node.__class__ == compiler.ast.Name:
+        if node.name in arg_names:
+            name = 'ARGV[%d]' % (arg_names.index(node.name) + 1)
+        else:
+            name = node.name
+        code = TAB * indent + name
+    elif node.__class__ == compiler.ast.For:
+        for_list = process_node(node.list, arg_names)
+        code = TAB * indent + 'for _, %s in ipairs(%s) do\n' % \
+            (node.assign.name, for_list)
+        code += process_node(node.body, arg_names, indent + 1)
+        code += TAB * indent + 'end\n'
+    elif node.__class__ == compiler.ast.Discard:
+        code = process_node(node.expr, arg_names, indent)
+    elif node.__class__ == compiler.ast.UnarySub:
+        code = TAB * indent + '-' + process_node(node.expr, arg_names)
+    elif node.__class__ == compiler.ast.Add:
+        op1 = process_node(node.left, arg_names)
+        op2 = process_node(node.right, arg_names)
+
+        # Guess if either operand is a string
+        if op1[0] == "'" or op2[0] == "'":
+            op = ' .. '
+        else:
+            op = ' + '
+
+        code = TAB * indent + op1 + op + op2
+    elif node.__class__ == compiler.ast.Const:
+        if node.value is None:
+            code = 'nil'
+        elif type(node.value) is str:
+            code = "'" + node.value + "'"
+        else:
+            code = str(node.value)
+
+        code = TAB * indent + code
+    elif node.__class__ == compiler.ast.CallFunc:
+        # We don't support positional or keyword arguments
+        if node.star_args or node.dstar_args:
+            raise Exception()
+
+        args = ', '.join(process_node(n, arg_names) for n in node.args)
+
+        # XXX We assume the function being called is a GetAttr node
+
+        # If we're calling append, add to the end of a list
+        if node.node.attrname == 'append':
+            code = 'table.insert(%s, %s)\n' \
+                    % (process_node(node.node.expr, arg_names), args)
+
+        # XXX Otherwise, assume this is a redis function call
+        else:
+            code = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
+
+        code = TAB * indent + code
+    elif node.__class__ == compiler.ast.If:
+        # It seems that the tests array always has one element in which is a
+        # two element list that contains the test and the body of the statement
+        if len(node.tests) != 1 or len(node.tests[0]) != 2:
+            raise Exception()
+
+        # TODO: Handle else
+        if node.else_ is not None:
+            raise Exception()
+
+        test = process_node(node.tests[0][0], arg_names)
+        code = TAB * indent + 'if %s then\n%s\n' % \
+                (test, process_node(node.tests[0][1], arg_names, indent + 1))
+        code += TAB * indent + 'end\n'
+    elif node.__class__ == compiler.ast.Compare:
+        # The ops attribute should contain an array with a single element which
+        # is a two element list containing the comparison operator and the
+        # value to be compared with
+        if len(node.ops) != 1 or len(node.ops[0]) != 2:
+            raise Exception()
+
+        lhs = process_node(node.expr, arg_names)
+        op = node.ops[0][0]
+        rhs = process_node(node.ops[0][1], arg_names)
+        code = '%s %s %s' % (lhs, op, rhs)
     else:
-        return str(arg)
+        # XXX This type of node is not handled
+        raise Exception()
 
-# Simple sentinel class used to signal loops
-class Iter(object):
-    def __init__(self, val):
-        self.val = val
-
-    def __repr__(self):
-        return 'Iter(%s)' % str(self.val)
-
-# Simple sentinel class used to signal conditions
-class If(object):
-    def __init__(self, val, label):
-        self.val = val
-        self.label = label
-
-    def __repr__(self):
-        return 'If(%s, %s)' % (str(self.val), str(self.label))
+    return code
 
 def redis_server(func):
+    # Get the names of function arguments
     code = byteplay.Code.from_code(func.func_code)
     client_arg = code.args[0]
     arg_names = code.args[1:]
 
-    stack = []
-    for c in code.code:
-        # Add the variable to the stack
-        if c[0] == byteplay.LOAD_FAST:
-            if c[1] in arg_names:
-                stack.append('ARGV[%d]' % (arg_names.index(c[1]) + 1))
-            else:
-                stack.append(c[1])
+    # Get the source code and strip whitespace and decorators
+    source = inspect.getsourcelines(func)[0]
+    spaces = len(source[0]) - len(source[0].lstrip())
+    source = [line[spaces:] for line in source]
+    source = ''.join(line for line in source if line[0] != '@')
 
-        # Add the constant to the stack
-        elif c[0] == byteplay.LOAD_CONST:
-            stack.append(argstr(c[1]))
-
-        # Add a tuple representing the attribute accessed on the item
-        elif c[0] == byteplay.LOAD_ATTR:
-            stack.append((stack.pop(), c[1]))
-
-        # Generate code for array subscripting (add 1 since Lua starts there)
-        elif c[0] == byteplay.BINARY_SUBSCR:
-            index = stack.pop()
-            stack.append('%s[%s + 1]' % (stack.pop(), index))
-
-        # Generate code for add taking a dumb guess if this is string
-        # concatenation or integer addition
-        elif c[0] == byteplay.BINARY_ADD:
-            op2 = stack.pop()
-            if op2[0] == '"' or stack[-1][0] == "'":
-                op = '..'
-            else:
-                op = '+'
-
-            stack.append('%s %s %s' % (stack.pop(), op, op2))
-        elif c[0] == byteplay.CALL_FUNCTION:
-            # Get the number of arguments and remove them
-            # and the function name from the stack
-            nargs = c[1]
-            args = stack[-nargs:]
-            stack = stack[:-nargs]
-            fn = stack.pop()
-
-            # We assume all functions are called on objects and there
-            # is no nested attribute access so fn is a tuple of
-            # (object, function)
-            if fn[0] == client_arg:
-                # We're calling a redis function
-                stack.append("redis.call('%s', %s)" % (fn[1], ', '.join(args)))
-            elif fn[1] == 'append':
-                # Code gen for list append
-                stack.append("table.insert(%s, %s)" % (fn[0], ', '.join(args)))
-            else:
-                # XXX Not supported
-                raise Exception()
-
-        # Either store a value to a variable or start iterating
-        elif c[0] == byteplay.STORE_FAST:
-            val = stack.pop()
-
-            # Put labels back on the stack
-            if type(val) == byteplay.Label:
-                label = val
-                val = stack.pop()
-                stack.append(label)
-
-            if type(val) == Iter:
-                # We popped an iterator, so we must be preparing to iterate
-                # This assumes the following bytecode structure for loops
-                #   SETUP_LOOP
-                #   LOAD_FAST << this is the thing being iterated over
-                #   GET_ITER
-                #   FOR_ITER
-                #   STORE_FAST << this is the variable for iteration
-                stack.append('for _, %s in ipairs(%s) do' % (c[1], val.val))
-            else:
-                stack.append('local %s = %s' % (c[1], val))
-
-        # Generate a new list constant
-        elif c[0] == byteplay.BUILD_LIST:
-            nargs = c[1]
-            if nargs > 0:
-                args = stack[-nargs:]
-                stack = stack[:-nargs]
-            else:
-                args = []
-            stack.append('{%s}' % ', '.join(args))
-
-        # Create a new Iter object to signal iteration
-        elif c[0] == byteplay.GET_ITER:
-            stack.append(Iter(stack.pop()))
-
-        # Just drop in an end statement to finish our block
-        elif c[0] == byteplay.POP_BLOCK:
-            stack.append('end')
-
-        # Generate code for the return
-        elif c[0] == byteplay.RETURN_VALUE:
-            stack.append('return %s' % stack.pop())
-
-        # Push an If onto the stack that we deal with later during output
-        elif c[0] == byteplay.POP_JUMP_IF_FALSE:
-            stack.append(If(stack.pop(), c[1]))
-
-        # Push labels so we can do proper code gen for conditions
-        elif type(c[0]) == byteplay.Label:
-            stack.append(c[0])
-
-        # Generate code for boolean comparisons
-        elif c[0] == byteplay.COMPARE_OP:
-            arg2, arg1 = stack.pop(), stack.pop()
-            stack.append('%s %s %s' % (arg1, c[1], arg2))
-
-    if_labels = []
-    lua_code = ''
-    indent = 0
-    for line in stack:
-        # We found a condition so store the label so we know when to end
-        if type(line) == If:
-            if_labels.append(line.label)
-            line = 'if %s then' % line.val
-
-        # Remove the label and end the block if this was a condition
-        if type(line) == byteplay.Label:
-            if line in if_labels:
-                if_labels.remove(line)
-                line = 'end'
-            else:
-                continue
-
-        if line == 'end':
-            indent -= 1
-        lua_code += '    ' * indent + line + '\n'
-        if line.endswith(' do') or line.startswith('if '):
-            indent += 1
+    # Generate the AST and the corresponding Lua code
+    ast = compiler.parse(source)
+    lua_code = process_node(ast.node.nodes[0].getChildNodes()[0], arg_names, 0)
 
     func.script = None
     def inner(client, *args):
