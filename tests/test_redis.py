@@ -49,3 +49,10 @@ def test_increx(redis):
     assert Foo().increx(redis, 'fooincr') == None
     redis.set('fooincr', 1)
     assert Foo().increx(redis, 'fooincr') == 2
+
+def test_type(redis):
+    @redis_server
+    def return_value(client, value):
+        return value
+
+    assert return_value(redis, 3) == 3

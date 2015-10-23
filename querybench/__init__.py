@@ -5,41 +5,37 @@ import compiler
 TAB = '  '
 
 # Generate code for a single node at a particular indentation level
-def process_node(node, arg_names, indent=0):
+def process_node(node, indent=0):
     code = ''
 
     if node.__class__ == compiler.ast.Stmt:
         for n in node.getChildNodes():
-            code += process_node(n, arg_names, indent)
+            code += process_node(n, indent)
     elif node.__class__ == compiler.ast.Assign:
-        value = process_node(node.expr, arg_names, indent).strip()
+        value = process_node(node.expr, indent).strip()
 
         for var in node.nodes:
             code += TAB * indent + 'local %s = %s\n' % (var.name, value)
     elif node.__class__ == compiler.ast.List:
         code = TAB * indent + '{' + \
-            ', '.join(process_node(n, arg_names) for n in node.nodes) + '}'
+            ', '.join(process_node(n) for n in node.nodes) + '}'
     elif node.__class__ == compiler.ast.Return:
-        code = TAB * indent + 'return ' + process_node(node.value, arg_names)
+        code = TAB * indent + 'return ' + process_node(node.value)
     elif node.__class__ == compiler.ast.Name:
-        if node.name in arg_names:
-            name = 'ARGV[%d]' % (arg_names.index(node.name) + 1)
-        else:
-            name = node.name
-        code = TAB * indent + name
+        code = TAB * indent + node.name
     elif node.__class__ == compiler.ast.For:
-        for_list = process_node(node.list, arg_names)
+        for_list = process_node(node.list)
         code = TAB * indent + 'for _, %s in ipairs(%s) do\n' % \
             (node.assign.name, for_list)
-        code += process_node(node.body, arg_names, indent + 1)
+        code += process_node(node.body, indent + 1)
         code += TAB * indent + 'end\n'
     elif node.__class__ == compiler.ast.Discard:
-        code = process_node(node.expr, arg_names, indent)
+        code = process_node(node.expr, indent)
     elif node.__class__ == compiler.ast.UnarySub:
-        code = TAB * indent + '-' + process_node(node.expr, arg_names)
+        code = TAB * indent + '-' + process_node(node.expr)
     elif node.__class__ == compiler.ast.Add:
-        op1 = process_node(node.left, arg_names)
-        op2 = process_node(node.right, arg_names)
+        op1 = process_node(node.left)
+        op2 = process_node(node.right)
 
         # Guess if either operand is a string
         if op1[0] == "'" or op2[0] == "'":
@@ -62,7 +58,7 @@ def process_node(node, arg_names, indent=0):
         if node.star_args or node.dstar_args:
             raise Exception()
 
-        args = ', '.join(process_node(n, arg_names) for n in node.args)
+        args = ', '.join(process_node(n) for n in node.args)
 
         # Handle some built-in functions
         if node.node.__class__ == compiler.ast.Name:
@@ -78,7 +74,7 @@ def process_node(node, arg_names, indent=0):
         # If we're calling append, add to the end of a list
         elif node.node.attrname == 'append':
             code = 'table.insert(%s, %s)\n' \
-                    % (process_node(node.node.expr, arg_names), args)
+                    % (process_node(node.node.expr), args)
 
         # XXX Otherwise, assume this is a redis function call
         else:
@@ -95,9 +91,9 @@ def process_node(node, arg_names, indent=0):
         if node.else_ is not None:
             raise Exception()
 
-        test = process_node(node.tests[0][0], arg_names)
+        test = process_node(node.tests[0][0])
         code = TAB * indent + 'if %s then\n%s\n' % \
-                (test, process_node(node.tests[0][1], arg_names, indent + 1))
+                (test, process_node(node.tests[0][1], indent + 1))
         code += TAB * indent + 'end\n'
     elif node.__class__ == compiler.ast.Compare:
         # The ops attribute should contain an array with a single element which
@@ -106,9 +102,9 @@ def process_node(node, arg_names, indent=0):
         if len(node.ops) != 1 or len(node.ops[0]) != 2:
             raise Exception()
 
-        lhs = process_node(node.expr, arg_names)
+        lhs = process_node(node.expr)
         op = node.ops[0][0]
-        rhs = process_node(node.ops[0][1], arg_names)
+        rhs = process_node(node.ops[0][1])
         code = '%s %s %s' % (lhs, op, rhs)
     else:
         # XXX This type of node is not handled
@@ -139,7 +135,7 @@ def redis_server(func):
 
     # Generate the AST and the corresponding Lua code
     ast = compiler.parse(source)
-    lua_code = process_node(ast.node.nodes[0].getChildNodes()[0], arg_names, 0)
+    lua_code = process_node(ast.node.nodes[0].getChildNodes()[0], 0)
 
     func.script = None
     def inner(*args):
@@ -152,7 +148,20 @@ def redis_server(func):
             args = args[1:]
 
         if func.script is None:
-            func.script = client.register_script(lua_code)
+            # Unpack arguments to their original names performing
+            # any necessary type conversions
+            # XXX We assume arguments will always have the same type
+            arg_unpacking = ''
+            for i, arg in enumerate(args):
+                if isinstance(arg, (int, long)):
+                    conversion = 'tonumber'
+                else:
+                    conversion = ''
+
+                arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
+                        (arg_names[i], conversion ,i+1)
+
+            func.script = client.register_script(arg_unpacking + lua_code)
 
         return func.script(args=args)
 
