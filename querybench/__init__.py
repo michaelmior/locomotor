@@ -25,9 +25,25 @@ def process_node(node, arg_names, indent=0):
     elif node.__class__ == compiler.ast.Name:
         code = TAB * indent + node.name
     elif node.__class__ == compiler.ast.For:
+        # Get the list we are looping over
         for_list = process_node(node.list, arg_names)
-        code = TAB * indent + 'for _, %s in ipairs(%s) do\n' % \
-            (node.assign.name, for_list)
+
+        # Try to find a comma in the list
+        try:
+            comma_index = for_list.index(',')
+        except ValueError:
+            comma_index = False
+
+        # This is a dumb heuristic and we just propagate this information
+        # if we were more careful, but we check for a digit followed by
+        # a comma to see if this is a loop over a range or a list
+        if comma_index is not False and for_list[0:comma_index].isdigit():
+            code = TAB * indent + 'for %s=%s do\n' % \
+                    (node.assign.name, for_list)
+        else:
+            code = TAB * indent + 'for _, %s in ipairs(%s) do\n' % \
+                (node.assign.name, for_list)
+
         code += process_node(node.body, arg_names, indent + 1)
         code += TAB * indent + 'end\n'
     elif node.__class__ == compiler.ast.Discard:
@@ -67,6 +83,14 @@ def process_node(node, arg_names, indent=0):
                 code = 'tonumber(%s)' % args
             elif node.node.name == 'str':
                 code = 'tostring(%s)' % args
+            elif node.node.name in ('range', 'xrange'):
+                # Extend to always use three arguments
+                if len(node.args) == 1:
+                    args = '0, %s - 1, 1' % args
+                elif len(node.args) == 2:
+                    args += ' - 1, 1'
+
+                code = args
             else:
                 # XXX We don't know how to handle this function
                 raise Exception()
