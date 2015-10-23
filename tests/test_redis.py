@@ -74,3 +74,10 @@ def test_loop(redis):
         return items
 
     assert loop(redis) == range(10)
+
+def test_nil(redis):
+    @redis_server
+    def nil(client):
+        return None
+
+    assert nil(redis) == None

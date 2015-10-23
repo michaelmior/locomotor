@@ -23,6 +23,10 @@ def process_node(node, arg_names, indent=0):
     elif node.__class__ == compiler.ast.Return:
         code = TAB * indent + 'return ' + process_node(node.value, arg_names)
     elif node.__class__ == compiler.ast.Name:
+        # None is represented as a name, but we want nil
+        if node.name == 'None':
+            node.name = 'nil'
+
         code = TAB * indent + node.name
     elif node.__class__ == compiler.ast.For:
         # Get the list we are looping over
@@ -207,6 +211,7 @@ def redis_server(func):
                 arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
                         (arg_names[i], conversion ,i+1)
 
+            print(arg_unpacking + lua_code)
             func.script = client.register_script(arg_unpacking + lua_code)
 
         # Add arguments which are pulled from the class instance
