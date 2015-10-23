@@ -64,10 +64,19 @@ def process_node(node, arg_names, indent=0):
 
         args = ', '.join(process_node(n, arg_names) for n in node.args)
 
-        # XXX We assume the function being called is a GetAttr node
+        # Handle some built-in functions
+        if node.node.__class__ == compiler.ast.Name:
+            if node.node.name == 'int':
+                code = 'tonumber(%s)' % args
+            elif node.node.name == 'str':
+                code = 'tostring(%s)' % args
+            else:
+                # XXX We don't know how to handle this function
+                raise Exception()
+        # XXX We assume now that the function being called is a GetAttr node
 
         # If we're calling append, add to the end of a list
-        if node.node.attrname == 'append':
+        elif node.node.attrname == 'append':
             code = 'table.insert(%s, %s)\n' \
                     % (process_node(node.node.expr, arg_names), args)
 
