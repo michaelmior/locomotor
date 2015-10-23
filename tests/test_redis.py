@@ -41,9 +41,11 @@ def test_add_link(redis):
 
 def test_increx(redis):
     class Foo:
+        KEY_EXISTS = 1
+
         @redis_server
         def increx(self, client, key):
-            if client.exists(key) == 1:
+            if client.exists(key) == self.KEY_EXISTS:
                 return client.incr(key)
 
     assert Foo().increx(redis, 'fooincr') == None
