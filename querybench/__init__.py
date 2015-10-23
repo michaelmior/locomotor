@@ -110,8 +110,17 @@ def process_node(node, arg_names, indent=0):
 def redis_server(func):
     # Get the names of function arguments
     code = byteplay.Code.from_code(func.func_code)
-    client_arg = code.args[0]
-    arg_names = code.args[1:]
+
+    # Assume that this is a method if the first argument is self
+    # This is obviously brittle, but easy and will probably work
+    if code.args[0] == 'self':
+        method = True
+        client_arg = code.args[1]
+        arg_names = code.args[2:]
+    else:
+        method = False
+        client_arg = code.args[0]
+        arg_names = code.args[1:]
 
     # Get the source code and strip whitespace and decorators
     source = inspect.getsourcelines(func)[0]
@@ -124,7 +133,15 @@ def redis_server(func):
     lua_code = process_node(ast.node.nodes[0].getChildNodes()[0], arg_names, 0)
 
     func.script = None
-    def inner(client, *args):
+    def inner(*args):
+        if method:
+            self = args[0]
+            client = args[1]
+            args = args[2:]
+        else:
+            client = args[0]
+            args = args[1:]
+
         if func.script is None:
             func.script = client.register_script(lua_code)
 

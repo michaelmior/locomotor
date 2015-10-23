@@ -40,11 +40,12 @@ def test_add_link(redis):
     assert add_link(redis, 'bar') == 2
 
 def test_increx(redis):
-    @redis_server
-    def increx(client, key):
-        if client.exists(key) == 1:
-            return client.incr(key)
+    class Foo:
+        @redis_server
+        def increx(self, client, key):
+            if client.exists(key) == 1:
+                return client.incr(key)
 
-    assert increx(redis, 'fooincr') == None
+    assert Foo().increx(redis, 'fooincr') == None
     redis.set('fooincr', 1)
-    assert increx(redis, 'fooincr') == 2
+    assert Foo().increx(redis, 'fooincr') == 2
