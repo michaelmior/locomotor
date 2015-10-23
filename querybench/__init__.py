@@ -175,7 +175,7 @@ def redis_server(func):
                 else:
                     arg = args[i]
 
-                if isinstance(arg, (int, long)):
+                if isinstance(arg, (int, long, float)):
                     conversion = 'tonumber'
                 else:
                     conversion = ''
