@@ -47,26 +47,26 @@ class RedisFunc(object):
     def process_node(self, node, indent=0):
         code = ''
 
-        if node.__class__ == compiler.ast.Stmt:
+        if isinstance(node, compiler.ast.Stmt):
             for n in node.getChildNodes():
                 code += self.process_node(n, indent)
-        elif node.__class__ == compiler.ast.Assign:
+        elif isinstance(node, compiler.ast.Assign):
             value = self.process_node(node.expr, indent).strip()
 
             for var in node.nodes:
                 code += TAB * indent + 'local %s = %s\n' % (var.name, value)
-        elif node.__class__ == compiler.ast.List:
+        elif isinstance(node, compiler.ast.List):
             code = TAB * indent + '{' + \
                 ', '.join(self.process_node(n) for n in node.nodes) + '}'
-        elif node.__class__ == compiler.ast.Return:
+        elif isinstance(node, compiler.ast.Return):
             code = TAB * indent + 'return ' + self.process_node(node.value)
-        elif node.__class__ == compiler.ast.Name:
+        elif isinstance(node, compiler.ast.Name):
             # None is represented as a name, but we want nil
             if node.name == 'None':
                 node.name = 'nil'
 
             code = TAB * indent + node.name
-        elif node.__class__ == compiler.ast.For:
+        elif isinstance(node, compiler.ast.For):
             # Get the list we are looping over
             for_list = self.process_node(node.list)
 
@@ -88,11 +88,11 @@ class RedisFunc(object):
 
             code += self.process_node(node.body, indent + 1)
             code += TAB * indent + 'end\n'
-        elif node.__class__ == compiler.ast.Discard:
+        elif isinstance(node, compiler.ast.Discard):
             code = self.process_node(node.expr, indent)
-        elif node.__class__ == compiler.ast.UnarySub:
+        elif isinstance(node, compiler.ast.UnarySub):
             code = TAB * indent + '-' + self.process_node(node.expr)
-        elif node.__class__ == compiler.ast.Add:
+        elif isinstance(node, compiler.ast.Add):
             op1 = self.process_node(node.left)
             op2 = self.process_node(node.right)
 
@@ -103,7 +103,7 @@ class RedisFunc(object):
                 op = ' + '
 
             code = TAB * indent + op1 + op + op2
-        elif node.__class__ == compiler.ast.Const:
+        elif isinstance(node, compiler.ast.Const):
             if node.value is None:
                 code = 'nil'
             elif type(node.value) is str:
@@ -112,7 +112,7 @@ class RedisFunc(object):
                 code = str(node.value)
 
             code = TAB * indent + code
-        elif node.__class__ == compiler.ast.CallFunc:
+        elif isinstance(node, compiler.ast.CallFunc):
             # We don't support positional or keyword arguments
             if node.star_args or node.dstar_args:
                 raise Exception()
@@ -120,7 +120,7 @@ class RedisFunc(object):
             args = ', '.join(self.process_node(n) for n in node.args)
 
             # Handle some built-in functions
-            if node.node.__class__ == compiler.ast.Name:
+            if isinstance(node.node, compiler.ast.Name):
                 if node.node.name == 'int':
                     code = 'tonumber(%s)' % args
                 elif node.node.name == 'str':
@@ -159,7 +159,7 @@ class RedisFunc(object):
                 code = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
 
             code = TAB * indent + code
-        elif node.__class__ == compiler.ast.If:
+        elif isinstance(node, compiler.ast.If):
             # It seems that the tests array always has one element in which
             # is a two element list that contains the test and the body of
             # the statement
@@ -174,7 +174,7 @@ class RedisFunc(object):
             code = TAB * indent + 'if %s then\n%s\n' % \
                     (test, self.process_node(node.tests[0][1], indent + 1))
             code += TAB * indent + 'end\n'
-        elif node.__class__ == compiler.ast.Compare:
+        elif isinstance(node, compiler.ast.Compare):
             # The ops attribute should contain an array with a single element which
             # is a two element list containing the comparison operator and the
             # value to be compared with
@@ -185,7 +185,7 @@ class RedisFunc(object):
             op = node.ops[0][0]
             rhs = self.process_node(node.ops[0][1])
             code = '%s %s %s' % (lhs, op, rhs)
-        elif node.__class__ == compiler.ast.Getattr:
+        elif isinstance(node, compiler.ast.Getattr):
             obj = self.process_node(node.expr)
 
             if obj != 'self':
