@@ -43,6 +43,15 @@ class RedisFunc(object):
         # Initialize the script to None, we'll register it Later
         self.script = None
 
+    # Convert the value to a string representation in Lua
+    def convert_value(self, value):
+        if value is None:
+            return 'nil'
+        elif type(value) is str:
+            return "'" + value + "'"
+        else:
+            return str(value)
+
     # Generate code for a single node at a particular indentation level
     def process_node(self, node, indent=0):
         code = ''
@@ -104,14 +113,7 @@ class RedisFunc(object):
 
             code = TAB * indent + op1 + op + op2
         elif isinstance(node, compiler.ast.Const):
-            if node.value is None:
-                code = 'nil'
-            elif type(node.value) is str:
-                code = "'" + node.value + "'"
-            else:
-                code = str(node.value)
-
-            code = TAB * indent + code
+            code = TAB * indent + self.convert_value(node.value)
         elif isinstance(node, compiler.ast.CallFunc):
             # We don't support positional or keyword arguments
             if node.star_args or node.dstar_args:
