@@ -1,9 +1,23 @@
-import byteplay
 import inspect
 import compiler
+import types
 
 TAB = '  '
 SELF_ARG = 'self__'
+
+# Parse the source code of a function and return its AST
+def get_ast_and_args(func):
+    # Get the source code and strip whitespace and decorators
+    source = inspect.getsourcelines(func)[0]
+    spaces = len(source[0]) - len(source[0].lstrip())
+    source = [line[spaces:] for line in source]
+    source = ''.join(line for line in source if line[0] != '@')
+
+    # Generate the AST and do some munging to get the node that represents
+    # the body of the function which is all that we care about
+    ast = compiler.parse(source)
+    return (ast.node.nodes[0].getChildNodes()[0], ast.node.nodes[0].argnames)
+
 
 # Generate code for a single node at a particular indentation level
 def process_node(node, arg_names, indent=0):
@@ -98,7 +112,17 @@ def process_node(node, arg_names, indent=0):
             else:
                 # XXX We don't know how to handle this function
                 raise Exception()
+
         # XXX We assume now that the function being called is a GetAttr node
+
+        # Check if we have a method call
+        elif node.node.expr.name == 'self':
+            # Add this function like a new argument
+            new_arg = SELF_ARG + node.node.attrname
+            if new_arg not in arg_names:
+                arg_names.append(new_arg)
+
+            code = '%s(%s)' % (new_arg, args)
 
         # If we're calling append, add to the end of a list
         elif node.node.attrname == 'append':
@@ -154,29 +178,21 @@ def process_node(node, arg_names, indent=0):
     return code
 
 def redis_server(func):
-    # Get the names of function arguments
-    code = byteplay.Code.from_code(func.func_code)
+    # Generate the AST and the corresponding Lua code
+    ast, arg_names = get_ast_and_args(func)
 
     # Assume that this is a method if the first argument is self
     # This is obviously brittle, but easy and will probably work
-    if code.args[0] == 'self':
+    if arg_names[0] == 'self':
         method = True
-        client_arg = code.args[1]
-        arg_names = list(code.args[2:])
+        client_arg = arg_names[1]
+        arg_names = list(arg_names[2:])
     else:
         method = False
-        client_arg = code.args[0]
-        arg_names = list(code.args[1:])
+        client_arg = arg_names[0]
+        arg_names = list(arg_names[1:])
 
-    # Get the source code and strip whitespace and decorators
-    source = inspect.getsourcelines(func)[0]
-    spaces = len(source[0]) - len(source[0].lstrip())
-    source = [line[spaces:] for line in source]
-    source = ''.join(line for line in source if line[0] != '@')
-
-    # Generate the AST and the corresponding Lua code
-    ast = compiler.parse(source)
-    lua_code = process_node(ast.node.nodes[0].getChildNodes()[0], arg_names, 0)
+    lua_code = process_node(ast, arg_names, 0)
 
     func.script = None
     def inner(*args):
@@ -203,7 +219,25 @@ def redis_server(func):
                 else:
                     arg = args[i]
 
-                if isinstance(arg, (int, long, float)):
+                # Generate code for methods called within this method
+                if isinstance(arg, types.MethodType):
+                    method_ast, method_args = get_ast_and_args(arg)
+
+                    # Remove the self  argument
+                    # XXX We currently assume that methods called by the method
+                    #     we're translating do not access any attributes of
+                    #     the instance
+                    method_args = method_args[1:]
+
+                    # Generate the function code and wrap in a local variable
+                    # We start with indent=1 so the body becomes indented
+                    func_code = process_node(method_ast, [], 1)
+                    arg_unpacking += 'local %s = function(%s)\n%s\nend\n' % \
+                            (arg_names[i], ', '.join(method_args), func_code)
+                    continue
+
+                # Convert numbers from string form
+                elif isinstance(arg, (int, long, float)):
                     conversion = 'tonumber'
                 else:
                     conversion = ''
@@ -211,7 +245,6 @@ def redis_server(func):
                 arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
                         (arg_names[i], conversion ,i+1)
 
-            print(arg_unpacking + lua_code)
             func.script = client.register_script(arg_unpacking + lua_code)
 
         # Add arguments which are pulled from the class instance

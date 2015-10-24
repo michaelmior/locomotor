@@ -81,3 +81,15 @@ def test_nil(redis):
         return None
 
     assert nil(redis) == None
+
+def test_function(redis):
+    class Foo:
+        def decorate_key(self, key):
+            return key + '1'
+
+        @redis_server
+        def get_decorated(self, client, key):
+            return client.get(self.decorate_key(key))
+
+    redis.set('foofunc1', 'bar')
+    assert Foo().get_decorated(redis, 'foofunc') == 'bar'
