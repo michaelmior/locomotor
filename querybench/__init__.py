@@ -205,8 +205,8 @@ class RedisFunc(object):
 
         return code
 
-    # Register the script with the backend
-    def register_script(self, client, args, method_self=None):
+    # Generate code to unpack arguments with their correct name and type
+    def unpack_args(self, args, method_self=None):
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
@@ -241,6 +241,12 @@ class RedisFunc(object):
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
                     (self.arg_names[i], conversion ,i+1)
 
+        return arg_unpacking
+
+
+    # Register the script with the backend
+    def register_script(self, client, args, method_self=None):
+        arg_unpacking = self.unpack_args(args, method_self)
         self.script = client.register_script(arg_unpacking + self.body)
 
     def __get__(self, instance, owner):
