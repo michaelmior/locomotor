@@ -5,6 +5,43 @@ import types
 TAB = '  '
 SELF_ARG = 'self__'
 
+# A block of Lua code consisting of LuaLine objects
+class LuaBlock(object):
+    def __init__(self, lines):
+        self.lines = lines
+
+    @property
+    def code(self):
+        return ''.join(line.code for line in self.lines)
+
+    def append(self, line):
+        self.lines.append(line)
+
+    def extend(self, block):
+        self.lines.extend(line for line in block.lines)
+
+    def __iter__(self):
+        return iter(self.lines)
+
+    def __str__(self):
+        return ''.join(str(line) for line in self.lines)
+
+# A line of Lua code which knows the line numbers of the corresponding Python
+class LuaLine(object):
+    def __init__(self, code, linenos=[], indent=0):
+        self.code = code
+
+        # Store the line numbers this code comes from
+        if isinstance(linenos, list):
+            self.linenos = linenos
+        else:
+            self.linenos = [linenos]
+
+        self.indent = indent
+
+    def __str__(self):
+        return TAB * self.indent + self.code + '\n'
+
 class RedisFunc(object):
     def __init__(self, func, helper=False):
         self.func = func
@@ -58,30 +95,33 @@ class RedisFunc(object):
 
     # Generate code for a single node at a particular indentation level
     def process_node(self, node, indent=0):
-        code = ''
+        code = []
 
         if isinstance(node, compiler.ast.Stmt):
             for n in node.getChildNodes():
-                code += self.process_node(n, indent)
+                code.extend(self.process_node(n, indent))
         elif isinstance(node, compiler.ast.Assign):
-            value = self.process_node(node.expr, indent).strip()
+            value = self.process_node(node.expr, indent).code
 
             for var in node.nodes:
-                code += TAB * indent + 'local %s = %s\n' % (var.name, value)
+                line = 'local %s = %s' % (var.name, value)
+                code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.List):
-            code = TAB * indent + '{' + \
+            line = '{' + \
                 ', '.join(self.process_node(n) for n in node.nodes) + '}'
+            code.append(LuaLine(line, [n.lineno for n in node.nodes], indent))
         elif isinstance(node, compiler.ast.Return):
-            code = TAB * indent + 'return ' + self.process_node(node.value)
+            line = 'return ' + self.process_node(node.value).code
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.Name):
             # None is represented as a name, but we want nil
             if node.name == 'None':
                 node.name = 'nil'
 
-            code = TAB * indent + node.name
+            code.append(LuaLine(node.name, node.lineno, indent))
         elif isinstance(node, compiler.ast.For):
             # Get the list we are looping over
-            for_list = self.process_node(node.list)
+            for_list = self.process_node(node.list).code
 
             # Try to find a comma in the list
             try:
@@ -93,21 +133,22 @@ class RedisFunc(object):
             # if we were more careful, but we check for a digit followed by
             # a comma to see if this is a loop over a range or a list
             if comma_index is not False and for_list[0:comma_index].isdigit():
-                code = TAB * indent + 'for %s=%s do\n' % \
-                        (node.assign.name, for_list)
+                line = 'for %s=%s do\n' % (node.assign.name, for_list)
             else:
-                code = TAB * indent + 'for _, %s in ipairs(%s) do\n' % \
-                    (node.assign.name, for_list)
+                line = 'for _, %s in ipairs(%s) do\n' % \
+                        (node.assign.name, for_list)
 
-            code += self.process_node(node.body, indent + 1)
-            code += TAB * indent + 'end\n'
+            code.append(LuaLine(line, node.lineno, indent))
+            code.extend(self.process_node(node.body, indent + 1))
+            code.append(LuaLine('end', [], indent))
         elif isinstance(node, compiler.ast.Discard):
-            code = self.process_node(node.expr, indent)
+            code.extend(self.process_node(node.expr, indent))
         elif isinstance(node, compiler.ast.UnarySub):
-            code = TAB * indent + '-' + self.process_node(node.expr)
+            line = '-' + self.process_node(node.expr).code
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.Add):
-            op1 = self.process_node(node.left)
-            op2 = self.process_node(node.right)
+            op1 = self.process_node(node.left).code
+            op2 = self.process_node(node.right).code
 
             # Guess if either operand is a number
             if op1.isdigit() or op2.isdigit():
@@ -115,22 +156,24 @@ class RedisFunc(object):
             else:
                 op = ' .. '
 
-            code = TAB * indent + op1 + op + op2
+            line = op1 + op + op2
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.Const):
-            code = TAB * indent + self.convert_value(node.value)
+            line = self.convert_value(node.value)
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.CallFunc):
             # We don't support positional or keyword arguments
             if node.star_args or node.dstar_args:
                 raise Exception()
 
-            args = ', '.join(self.process_node(n) for n in node.args)
+            args = ', '.join(self.process_node(n).code for n in node.args)
 
             # Handle some built-in functions
             if isinstance(node.node, compiler.ast.Name):
                 if node.node.name == 'int':
-                    code = 'tonumber(%s)' % args
+                    line = 'tonumber(%s)' % args
                 elif node.node.name == 'str':
-                    code = 'tostring(%s)' % args
+                    line = 'tostring(%s)' % args
                 elif node.node.name in ('range', 'xrange'):
                     # Extend to always use three arguments
                     if len(node.args) == 1:
@@ -138,7 +181,7 @@ class RedisFunc(object):
                     elif len(node.args) == 2:
                         args += ' - 1, 1'
 
-                    code = args
+                    line = args
                 else:
                     # XXX We don't know how to handle this function
                     raise Exception()
@@ -153,18 +196,18 @@ class RedisFunc(object):
                 if new_arg not in self.arg_names:
                     self.arg_names.append(new_arg)
 
-                code = '%s(%s)' % (new_arg, args)
+                line = '%s(%s)' % (new_arg, args)
 
             # If we're calling append, add to the end of a list
             elif node.node.attrname == 'append':
-                code = 'table.insert(%s, %s)\n' \
-                        % (self.process_node(node.node.expr), args)
+                line = 'table.insert(%s, %s)\n' \
+                        % (self.process_node(node.node.expr).code, args)
 
             # XXX Otherwise, assume this is a redis function call
             else:
-                code = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
+                line = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
 
-            code = TAB * indent + code
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.If):
             # It seems that the tests array always has one element in which
             # is a two element list that contains the test and the body of
@@ -176,10 +219,17 @@ class RedisFunc(object):
             if node.else_ is not None:
                 raise Exception()
 
-            test = self.process_node(node.tests[0][0])
-            code = TAB * indent + 'if %s then\n%s\n' % \
-                    (test, self.process_node(node.tests[0][1], indent + 1))
-            code += TAB * indent + 'end\n'
+            # Add a line for the initial test
+            test = self.process_node(node.tests[0][0]).code
+            line = 'if %s then' % test
+            code.append(LuaLine(line, node.lineno, indent))
+
+            # Generate the body of the if block
+            body = self.process_node(node.tests[0][1], indent + 1)
+            code.extend(body)
+
+            # Close the if block
+            code.append(LuaLine('end', [], indent))
         elif isinstance(node, compiler.ast.Compare):
             # The ops attribute should contain an array with a single element which
             # is a two element list containing the comparison operator and the
@@ -187,12 +237,13 @@ class RedisFunc(object):
             if len(node.ops) != 1 or len(node.ops[0]) != 2:
                 raise Exception()
 
-            lhs = self.process_node(node.expr)
+            lhs = self.process_node(node.expr).code
             op = node.ops[0][0]
-            rhs = self.process_node(node.ops[0][1])
-            code = '%s %s %s' % (lhs, op, rhs)
+            rhs = self.process_node(node.ops[0][1]).code
+            line = '%s %s %s' % (lhs, op, rhs)
+            code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.Getattr):
-            obj = self.process_node(node.expr)
+            obj = self.process_node(node.expr).code
 
             if obj != 'self':
                 # XXX We're probably doing some external stuff we can't handle
@@ -205,12 +256,13 @@ class RedisFunc(object):
                     self.helper_args.append(new_arg)
                 else:
                     self.arg_names.append(new_arg)
-            code = new_arg
+
+            code.append(LuaLine(new_arg, node.lineno, indent))
         else:
             # XXX This type of node is not handled
             raise Exception()
 
-        return code
+        return LuaBlock(code)
 
     # Generate code to unpack arguments with their correct name and type
     def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
@@ -271,7 +323,8 @@ class RedisFunc(object):
     # Register the script with the backend
     def register_script(self, client, args, method_self=None):
         arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
-        self.script = client.register_script(arg_unpacking + self.body)
+        code = arg_unpacking + str(self.body)
+        self.script = client.register_script(code)
 
     def __get__(self, instance, owner):
         # We need a descriptor here to get the class instance then we
