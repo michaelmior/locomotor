@@ -84,8 +84,10 @@ def test_nil(redis):
 
 def test_function(redis):
     class Foo:
+        KEY_SUFFIX = '1'
+
         def decorate_key(self, key):
-            return key + '1'
+            return key + self.KEY_SUFFIX
 
         @redis_server
         def get_decorated(self, client, key):

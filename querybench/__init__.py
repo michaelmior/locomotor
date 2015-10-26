@@ -34,6 +34,10 @@ class RedisFunc(object):
             if not helper:
                 self.client_arg = self.arg_names[0]
 
+        # Store helper function data
+        self.helper = helper
+        self.helper_args = []
+
         # Strip the instance and client object parameters
         self.arg_names = list(self.arg_names[self.method + (not helper):])
 
@@ -197,7 +201,10 @@ class RedisFunc(object):
             # Add a new argument to handle this
             new_arg = SELF_ARG + node.attrname
             if new_arg not in self.arg_names:
-                self.arg_names.append(new_arg)
+                if self.helper:
+                    self.helper_args.append(new_arg)
+                else:
+                    self.arg_names.append(new_arg)
             code = new_arg
         else:
             # XXX This type of node is not handled
@@ -206,19 +213,19 @@ class RedisFunc(object):
         return code
 
     # Generate code to unpack arguments with their correct name and type
-    def unpack_args(self, args, method_self=None):
+    def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
         arg_unpacking = ''
-        for i, name in enumerate(self.arg_names):
+        for i, name in enumerate(arg_names[start_arg:]):
             # Perform the lookup for class variables
             # We should be able to extend this to support multiple lookups
             # i.e., self.foo.bar
             if name.startswith(SELF_ARG):
                 arg = getattr(method_self, name[len(SELF_ARG):])
             else:
-                arg = args[i]
+                arg = args[i + start_arg]
 
             # Generate code for methods called within this method
             if isinstance(arg, types.MethodType):
@@ -227,9 +234,16 @@ class RedisFunc(object):
                 #     the instance
                 wrapped = RedisFunc(arg, helper=True)
 
+                # Add any new args which come from the current object
+                # to the list of arguments for helper functions
+                for new_arg in wrapped.helper_args:
+                    if new_arg not in arg_names:
+                        arg_names.append(new_arg)
+
                 # Dump the helper function code into a local variable
                 arg_unpacking += 'local %s = function(%s)\n%s\nend\n' % \
-                        (self.arg_names[i], ', '.join(wrapped.arg_names), wrapped.body)
+                        (self.arg_names[i + start_arg],
+                         ', '.join(wrapped.arg_names), wrapped.body)
                 continue
 
             # Convert numbers from string form
@@ -239,14 +253,24 @@ class RedisFunc(object):
                 conversion = ''
 
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
-                    (self.arg_names[i], conversion ,i+1)
+                    (arg_names[i + start_arg], conversion ,i + start_arg + 1)
 
-        return arg_unpacking
+        # Expand any necessary helper arguments
+        if len(arg_names) > start_arg + 1:
+            # Args is passed through as an empty array since all of them
+            # must be pulled from method_self anyway
+            helper_unpacking = self.unpack_args([], arg_names,
+                                                len(arg_names) - 1,
+                                                method_self)
+        else:
+            helper_unpacking = ''
+
+        return helper_unpacking + arg_unpacking
 
 
     # Register the script with the backend
     def register_script(self, client, args, method_self=None):
-        arg_unpacking = self.unpack_args(args, method_self)
+        arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
         self.script = client.register_script(arg_unpacking + self.body)
 
     def __get__(self, instance, owner):
