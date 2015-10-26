@@ -105,11 +105,11 @@ class RedisFunc(object):
             op1 = self.process_node(node.left)
             op2 = self.process_node(node.right)
 
-            # Guess if either operand is a string
-            if op1[0] == "'" or op2[0] == "'":
-                op = ' .. '
-            else:
+            # Guess if either operand is a number
+            if op1.isdigit() or op2.isdigit():
                 op = ' + '
+            else:
+                op = ' .. '
 
             code = TAB * indent + op1 + op + op2
         elif isinstance(node, compiler.ast.Const):
