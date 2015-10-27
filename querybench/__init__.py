@@ -288,10 +288,12 @@ class RedisFunc(object):
 
     # Generate code to unpack arguments with their correct name and type
     def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
+
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
         arg_unpacking = ''
+        new_args = 0
         for i, name in enumerate(arg_names[start_arg:]):
             # Perform the lookup for class variables
             # We should be able to extend this to support multiple lookups
@@ -313,6 +315,7 @@ class RedisFunc(object):
                 for new_arg in wrapped.helper_args:
                     if new_arg not in arg_names:
                         arg_names.append(new_arg)
+                        new_args += 1
 
                 # Dump the helper function code into a local variable
                 arg_unpacking += 'local %s = function(%s)\n%s\nend\n' % \
@@ -332,11 +335,11 @@ class RedisFunc(object):
                     (arg_names[i + start_arg], conversion ,i + start_arg + 1)
 
         # Expand any necessary helper arguments
-        if len(arg_names) > start_arg + 1:
+        if new_args > 0:
             # Args is passed through as an empty array since all of them
             # must be pulled from method_self anyway
             helper_unpacking = self.unpack_args([], arg_names,
-                                                len(arg_names) - 1,
+                                                start_arg + new_args,
                                                 method_self)
         else:
             helper_unpacking = ''
