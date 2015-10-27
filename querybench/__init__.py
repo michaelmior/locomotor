@@ -57,7 +57,7 @@ class RedisFunc(object):
         # Get the source code and strip whitespace and decorators
         source = inspect.getsourcelines(func)[0]
         spaces = len(source[0]) - len(source[0].lstrip())
-        source = [line[spaces:] for line in source]
+        source = [line[spaces:] for line in source if not line.isspace()]
         self.source = ''.join(line for line in source if line[0] != '@')
 
         # Generate the AST and do some munging to get the node that represents
