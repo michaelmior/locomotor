@@ -122,3 +122,17 @@ def test_dict(redis):
         return d[k]
 
     assert foo(redis, {'a': 1, 'b': 2}, 'b') == 2
+
+def test_execute(redis):
+    @redis_server
+    def pipe(client, key1, key2):
+        client.pipe()
+        client.get(key1)
+        client.get(key2)
+        values = client.execute()
+
+        return values[0] + values[1]
+
+    redis.set('pipe_foo', 'baz')
+    redis.set('pipe_bar', 'quux')
+    assert pipe(redis, 'pipe_foo', 'pipe_bar') == 'bazquux'

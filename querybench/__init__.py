@@ -112,7 +112,7 @@ class RedisFunc(object):
             value = self.process_node(node.expr, indent).code
 
             for var in node.nodes:
-                line = 'local %s = %s' % (var.name, value)
+                line = 'local %s = %s;' % (var.name, value)
                 code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.List):
             line = '{' + \
@@ -211,11 +211,26 @@ class RedisFunc(object):
                 line = 'table.insert(%s, %s)\n' \
                         % (self.process_node(node.node.expr).code, args)
 
+            # XXX Assume this is a Redis pipeline execution
+            elif node.node.attrname == 'pipe':
+                # Do nothing to start a pipeline
+                line = ''
+            elif node.node.attrname == 'execute':
+                expr = self.process_node(node.node.expr).code
+                line = '__PIPE_GET(\'%s\')' % expr
+
             # XXX Otherwise, assume this is a redis function call
             else:
-                line = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
+                # Generate the Redis function call expression
+                call = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
 
-            code.append(LuaLine(line, node.lineno, indent))
+                # Wrap the Redis call in a function which stores the
+                # result if needed later for pipelining and returns it
+                expr = self.process_node(node.node.expr).code
+                line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
+
+            if line:
+                code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.If):
             # It seems that the tests array always has one element in which
             # is a two element list that contains the test and the body of
@@ -299,11 +314,27 @@ class RedisFunc(object):
 
     # Generate code to unpack arguments with their correct name and type
     def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
+        # If this is the beginning of unpacking, start by also defining
+        # a variable to hold intermediate results for pipelined operations
+        if start_arg == 0:
+            arg_unpacking = 'local __PIPELINE_RESULTS = {}\n'
+            arg_unpacking += 'local __PIPE_ADD = function(key, value)\n'
+            arg_unpacking += TAB + 'if __PIPELINE_RESULTS[key] == nil then\n'
+            arg_unpacking += 2 * TAB + '__PIPELINE_RESULTS[key] = {}\n'
+            arg_unpacking += TAB + 'end\n'
+            arg_unpacking += TAB + 'table.insert(__PIPELINE_RESULTS[key], ' \
+                                                'value)'
+            arg_unpacking += TAB + 'return value\nend\n'
+            arg_unpacking += 'local __PIPE_GET = function(key)\n'
+            arg_unpacking += TAB + 'local RETVAL = __PIPELINE_RESULTS[key]'
+            arg_unpacking += TAB + '__PIPELINE_RESULTS[key] = {}'
+            arg_unpacking += TAB + 'return RETVAL\nend\n'
+        else:
+            arg_unpacking = ''
 
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
-        arg_unpacking = ''
         new_args = 0
         for i, name in enumerate(arg_names[start_arg:]):
             # Perform the lookup for class variables
