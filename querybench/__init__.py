@@ -258,6 +258,12 @@ class RedisFunc(object):
                     self.arg_names.append(new_arg)
 
             code.append(LuaLine(new_arg, node.lineno, indent))
+        elif isinstance(node, compiler.ast.Mod):
+            op1 = self.process_node(node.left).code
+            op2 = self.process_node(node.right).code
+
+            line = op1 + ' % ' + op2
+            code.append(LuaLine(line, node.lineno, indent))
         else:
             # XXX This type of node is not handled
             raise Exception()

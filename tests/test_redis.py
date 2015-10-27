@@ -95,3 +95,16 @@ def test_function(redis):
 
     redis.set('foofunc1', 'bar')
     assert Foo().get_decorated(redis, 'foofunc') == 'bar'
+
+def test_shard(redis):
+    class Foo:
+        db_count = 3
+
+        def shard(self, w_id) :
+            return int(w_id) % self.db_count
+
+        @redis_server
+        def get(self, client):
+            return self.shard('10')
+
+    assert Foo().get(redis) == 1
