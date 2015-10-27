@@ -22,6 +22,12 @@ class LuaBlock(object):
     def extend(self, block):
         self.lines.extend(line for line in block.lines)
 
+    def __getitem__(self, *args):
+        return self.lines.__getitem__(*args)
+
+    def __len__(self):
+        return len(self.lines)
+
     def __iter__(self):
         return iter(self.lines)
 
