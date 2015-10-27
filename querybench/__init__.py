@@ -278,7 +278,12 @@ class RedisFunc(object):
 
             subs = ', '.join(self.process_node(n).code for n in node.subs)
             expr = self.process_node(node.expr).code
-            line = '%s[%s + 1]' % (expr, subs)
+
+            # Here we check the __DICT property of the object to see if
+            # it is not a dictionary in which case we add 1 to the index
+            line = '%s[(%s.__DICT) and (%s) or (%s + 1)]' % \
+                    (expr, expr, subs, subs)
+
             code.append(LuaLine(line, node.lineno, indent))
         else:
             # XXX This type of node is not handled
@@ -333,6 +338,12 @@ class RedisFunc(object):
 
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
                     (arg_names[i + start_arg], conversion ,i + start_arg + 1)
+
+            # Track if this is a dictionary so we know if we
+            # need to add one to indexes into the Lua table
+            if isinstance(arg, dict):
+                arg_unpacking += '%s.__DICT = true\n' % \
+                        arg_names[i + start_arg]
 
         # Expand any necessary helper arguments
         if new_args > 0:

@@ -115,3 +115,10 @@ def test_array(redis):
         return array[0]
 
     assert foo(redis, [3, 2, 1]) == 3
+
+def test_dict(redis):
+    @redis_server
+    def foo(client, d, k):
+        return d[k]
+
+    assert foo(redis, {'a': 1, 'b': 2}, 'b') == 2
