@@ -108,3 +108,10 @@ def test_shard(redis):
             return self.shard('10')
 
     assert Foo().get(redis) == 1
+
+def test_array(redis):
+    @redis_server
+    def foo(client, array):
+        return array[0]
+
+    assert foo(redis, [3, 2, 1]) == 3

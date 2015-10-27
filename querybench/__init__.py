@@ -1,9 +1,11 @@
 import inspect
 import compiler
+import msgpack
 import types
 
 TAB = '  '
 SELF_ARG = 'self__'
+PACKED_TYPES = (list, dict)
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
@@ -264,6 +266,20 @@ class RedisFunc(object):
 
             line = op1 + ' % ' + op2
             code.append(LuaLine(line, node.lineno, indent))
+        elif isinstance(node, compiler.ast.Subscript):
+            # XXX I'm not entirely sure what this means, but if it's not
+            #     what we expect, then we should fail to be safe
+            if node.flags != compiler.consts.OP_APPLY:
+                Exception()
+
+            # XXX No support for slices yet
+            if len(node.subs) > 0:
+                Exception
+
+            subs = ', '.join(self.process_node(n).code for n in node.subs)
+            expr = self.process_node(node.expr).code
+            line = '%s[%s + 1]' % (expr, subs)
+            code.append(LuaLine(line, node.lineno, indent))
         else:
             # XXX This type of node is not handled
             raise Exception()
@@ -307,6 +323,8 @@ class RedisFunc(object):
             # Convert numbers from string form
             elif isinstance(arg, (int, long, float)):
                 conversion = 'tonumber'
+            elif isinstance(arg, PACKED_TYPES):
+                conversion = 'cmsgpack.unpack'
             else:
                 conversion = ''
 
@@ -360,6 +378,11 @@ class RedisFunc(object):
         args += [getattr(method_self, attr[len(SELF_ARG):]) \
                 for attr in self.arg_names \
                 if attr.startswith(SELF_ARG)]
+
+        # Dump the necessary arguments with msgpack
+        for i in range(len(args)):
+            if isinstance(args[i], PACKED_TYPES):
+                args[i] = msgpack.dumps(args[i])
 
         return self.script(args=args)
 
