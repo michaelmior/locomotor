@@ -250,6 +250,11 @@ class RedisFunc(object):
                 line = 'string.gsub(%s, %s)\n' \
                         % (self.process_node(node.node.expr).code, args)
 
+            # Join a table of strings
+            elif node.node.attrname == 'join':
+                line = 'table.concat(%s, %s)\n' \
+                        % (self.process_node(node.node.expr).code, args)
+
             # If we're calling append, add to the end of a list
             elif node.node.attrname == 'append':
                 line = 'table.insert(%s, %s)\n' \

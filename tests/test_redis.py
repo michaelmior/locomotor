@@ -171,3 +171,10 @@ def test_string_replace(redis):
         return string.replace('foo', 'bar')
 
     assert replace(redis, 'foo') == 'bar'
+
+def test_string_join(redis):
+    @redis_server
+    def join(client, arr):
+        return arr.join(', ')
+
+    assert join(redis, ['a', 'b', 'c']) == 'a, b, c'
