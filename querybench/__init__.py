@@ -121,7 +121,9 @@ class RedisFunc(object):
         if value is None:
             return 'nil'
         elif type(value) is str:
-            return "'" + value + "'"
+            # XXX Lua probably doesn't follow the exact same escaping rules
+            #     but this will work for a lot of simple cases
+            return "'" + value.encode('string_escape') + "'"
         else:
             return str(value)
 

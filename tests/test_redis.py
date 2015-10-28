@@ -188,3 +188,10 @@ def test_string_join(redis):
         return arr.join(', ')
 
     assert join(redis, ['a', 'b', 'c']) == 'a, b, c'
+
+def test_newline(redis):
+    @redis_server
+    def newline(client):
+        return '\n'
+
+    assert newline(redis) == '\n'
