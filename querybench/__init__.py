@@ -296,10 +296,6 @@ class RedisFunc(object):
             if len(node.tests) != 1 or len(node.tests[0]) != 2:
                 raise Exception()
 
-            # TODO: Handle else
-            if node.else_ is not None:
-                raise Exception()
-
             # Add a line for the initial test
             test = self.process_node(node.tests[0][0]).code
             line = 'if %s then' % test
@@ -308,6 +304,12 @@ class RedisFunc(object):
             # Generate the body of the if block
             body = self.process_node(node.tests[0][1], indent + 1)
             code.extend(body)
+
+            # Generate the body of the else branch
+            if node.else_ is not None:
+                code.append(LuaLine('else', [], indent))
+                else_body = self.process_node(node.else_, indent + 1)
+                code.extend(else_body)
 
             # Close the if block
             code.append(LuaLine('end', [], indent))
