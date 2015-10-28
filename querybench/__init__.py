@@ -195,7 +195,8 @@ class RedisFunc(object):
             if node.star_args or node.dstar_args:
                 raise Exception()
 
-            args = ', '.join(self.process_node(n).code for n in node.args)
+            raw_args = [self.process_node(n) for n in node.args]
+            args = ', '.join(arg.code for arg in raw_args)
 
             # Handle some built-in functions
             if isinstance(node.node, compiler.ast.Name):
@@ -231,6 +232,12 @@ class RedisFunc(object):
             elif node.node.attrname == 'append':
                 line = 'table.insert(%s, %s)\n' \
                         % (self.process_node(node.node.expr).code, args)
+
+            # If we're calling insert, add to the appropriate list position
+            elif node.node.attrname == 'insert':
+                line = 'table.insert(%s, %s + 1, %s)\n' \
+                        % (self.process_node(node.node.expr).code,
+                           raw_args[0].code, raw_args[1].code)
 
             # XXX Assume this is a Redis pipeline execution
             elif node.node.attrname == 'pipe':

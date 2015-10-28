@@ -136,3 +136,12 @@ def test_execute(redis):
     redis.set('pipe_foo', 'baz')
     redis.set('pipe_bar', 'quux')
     assert pipe(redis, 'pipe_foo', 'pipe_bar') == 'bazquux'
+
+def test_insert(redis):
+    @redis_server
+    def insert(client):
+        x = []
+        x.insert(0, 1)
+        return x[0]
+
+    assert insert(redis) == 1
