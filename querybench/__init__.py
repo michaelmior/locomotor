@@ -245,6 +245,11 @@ class RedisFunc(object):
 
                 line = '%s(%s)' % (new_arg, args)
 
+            # Perform string replacement
+            elif node.node.attrname == 'replace':
+                line = 'string.gsub(%s, %s)\n' \
+                        % (self.process_node(node.node.expr).code, args)
+
             # If we're calling append, add to the end of a list
             elif node.node.attrname == 'append':
                 line = 'table.insert(%s, %s)\n' \

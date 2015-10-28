@@ -164,3 +164,10 @@ def test_class_constant(redis):
         return constants.FOO
 
     assert constant(redis) == 3
+
+def test_string_replace(redis):
+    @redis_server
+    def replace(client, string):
+        return string.replace('foo', 'bar')
+
+    assert replace(redis, 'foo') == 'bar'
