@@ -1,3 +1,4 @@
+import imp
 import pytest
 
 from querybench import redis_server
@@ -195,3 +196,58 @@ def test_newline(redis):
         return '\n'
 
     assert newline(redis) == '\n'
+
+def test_tpcc_fragment(redis):
+    constants = imp.load_source('constants',
+                                'vendor/pytpcc/pytpcc/constants.py')
+
+    class RedisDriver:
+        KEY_SEPARATOR = ':'
+
+        def safeKey(self, keys) :
+                new_keys = []
+                for k in keys :
+                    new_keys.append(str(k))
+                return self.KEY_SEPARATOR.join(new_keys
+                    ).replace('\n', '').replace(' ','')
+
+        @redis_server
+        def doDelivery(self, rdr):
+            # Initialize input parameters
+            w_id = o_carrier_id = ol_delivery_d = '1'
+
+            #-------------------------
+            # Initialize Data Holders
+            #-------------------------
+            order_key = [ ]
+            ol_total = [ ]
+            customer_key = [ ]
+            ol_counts = [ ]
+            no_o_id = [ ]
+            for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1) :
+                order_key.append(None)
+                ol_total.append(0)
+                customer_key.append(None)
+                ol_counts.append(0)
+
+            #---------------------
+            # Get New Order Query
+            #---------------------
+            for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1) :
+                cursor = d_id - 1
+                # Get set of possible new order ids
+                index_key = self.safeKey([d_id, w_id])
+                rdr.srandmember('NEW_ORDER.INDEXES.GETNEWORDER.' + index_key)
+            id_set = rdr.execute()
+
+            for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1) :
+                cursor = d_id - 1
+                if id_set[cursor] == None :
+                    rdr.get('NULL_VALUE')
+                else :
+                    rdr.hget('NEW_ORDER.' + str(id_set[cursor]), 'NO_O_ID')
+            no_o_id = rdr.execute()
+
+            return None
+
+    assert RedisDriver().doDelivery(redis) == None
