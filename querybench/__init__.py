@@ -146,7 +146,7 @@ class RedisFunc(object):
                 code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, compiler.ast.List):
             line = '{' + \
-                ', '.join(self.process_node(n) for n in node.nodes) + '}'
+                ', '.join(self.process_node(n).code for n in node.nodes) + '}'
             code.append(LuaLine(line, [n.lineno for n in node.nodes], indent))
         elif isinstance(node, compiler.ast.Return):
             line = 'return ' + self.process_node(node.value).code
