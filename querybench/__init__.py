@@ -233,18 +233,6 @@ class RedisFunc(object):
                     # XXX We don't know how to handle this function
                     raise Exception()
 
-            # XXX We assume now that the function being called
-            #     is a GetAttr node
-
-            # Check if we have a method call
-            elif node.node.expr.name == 'self':
-                # Add this function like a new argument
-                new_arg = SELF_ARG + node.node.attrname
-                if new_arg not in self.arg_names:
-                    self.arg_names.append(new_arg)
-
-                line = '%s(%s)' % (new_arg, args)
-
             # Perform string replacement
             elif node.node.attrname == 'replace':
                 line = 'string.gsub(%s, %s)\n' \
@@ -265,6 +253,17 @@ class RedisFunc(object):
                 line = 'table.insert(%s, %s + 1, %s)\n' \
                         % (self.process_node(node.node.expr).code,
                            raw_args[0].code, raw_args[1].code)
+            # XXX We assume now that the function being called
+            #     is a GetAttr node
+
+            # Check if we have a method call
+            elif node.node.expr.name == 'self':
+                # Add this function like a new argument
+                new_arg = SELF_ARG + node.node.attrname
+                if new_arg not in self.arg_names:
+                    self.arg_names.append(new_arg)
+
+                line = '%s(%s)' % (new_arg, args)
 
             # XXX Assume this is a Redis pipeline execution
             elif node.node.attrname == 'pipe':

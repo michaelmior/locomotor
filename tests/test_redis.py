@@ -165,6 +165,16 @@ def test_class_constant(redis):
 
     assert constant(redis) == 3
 
+def test_nested_func(redis):
+    class constants:
+        STRING = 'foo'
+
+    @redis_server
+    def replace(client):
+        return constants.STRING.replace('foo', 'bar')
+
+    assert replace(redis) == 'bar'
+
 def test_string_replace(redis):
     @redis_server
     def replace(client, string):
