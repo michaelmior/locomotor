@@ -192,6 +192,10 @@ class RedisFunc(object):
         elif isinstance(node, compiler.ast.UnarySub):
             line = '-' + self.process_node(node.expr).code
             code.append(LuaLine(line, node.lineno, indent))
+        elif isinstance(node, compiler.ast.Sub):
+            op1 = self.process_node(node.left).code
+            op2 = self.process_node(node.right).code
+            code.append(LuaLine(op1 + ' - ' + op2, node.lineno, indent))
         elif isinstance(node, compiler.ast.Add):
             op1 = self.process_node(node.left).code
             op2 = self.process_node(node.right).code
