@@ -6,6 +6,24 @@ import types
 TAB = '  '
 SELF_ARG = 'self__'
 PACKED_TYPES = (list, dict)
+PIPELINE_CODE = """
+local __PIPELINE_RESULTS = {}
+
+local __PIPE_ADD = function(key, value)
+  if __PIPELINE_RESULTS[key] == nil then
+    __PIPELINE_RESULTS[key] = {}
+  end
+
+  table.insert(__PIPELINE_RESULTS[key], value)
+  return value
+end
+
+local __PIPE_GET = function(key)
+  local RETVAL = __PIPELINE_RESULTS[key]
+  __PIPELINE_RESULTS[key] = {}
+  return RETVAL
+end
+"""
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
@@ -317,18 +335,7 @@ class RedisFunc(object):
         # If this is the beginning of unpacking, start by also defining
         # a variable to hold intermediate results for pipelined operations
         if start_arg == 0:
-            arg_unpacking = 'local __PIPELINE_RESULTS = {}\n'
-            arg_unpacking += 'local __PIPE_ADD = function(key, value)\n'
-            arg_unpacking += TAB + 'if __PIPELINE_RESULTS[key] == nil then\n'
-            arg_unpacking += 2 * TAB + '__PIPELINE_RESULTS[key] = {}\n'
-            arg_unpacking += TAB + 'end\n'
-            arg_unpacking += TAB + 'table.insert(__PIPELINE_RESULTS[key], ' \
-                                                'value)'
-            arg_unpacking += TAB + 'return value\nend\n'
-            arg_unpacking += 'local __PIPE_GET = function(key)\n'
-            arg_unpacking += TAB + 'local RETVAL = __PIPELINE_RESULTS[key]'
-            arg_unpacking += TAB + '__PIPELINE_RESULTS[key] = {}'
-            arg_unpacking += TAB + 'return RETVAL\nend\n'
+            arg_unpacking = PIPELINE_CODE
         else:
             arg_unpacking = ''
 
