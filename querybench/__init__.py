@@ -179,9 +179,9 @@ class RedisFunc(object):
             # if we were more careful, but we check for a digit followed by
             # a comma to see if this is a loop over a range or a list
             if comma_index is not False and for_list[0:comma_index].isdigit():
-                line = 'for %s=%s do\n' % (node.assign.name, for_list)
+                line = 'for %s=%s do' % (node.assign.name, for_list)
             else:
-                line = 'for _, %s in ipairs(%s) do\n' % \
+                line = 'for _, %s in ipairs(%s) do' % \
                         (node.assign.name, for_list)
 
             code.append(LuaLine(line, node.lineno, indent))
@@ -249,7 +249,7 @@ class RedisFunc(object):
 
             # If we're calling append, add to the end of a list
             elif node.node.attrname == 'append':
-                line = 'table.insert(%s, %s)\n' \
+                line = 'table.insert(%s, %s)' \
                         % (self.process_node(node.node.expr).code, args)
 
             # If we're calling insert, add to the appropriate list position
