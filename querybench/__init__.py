@@ -6,7 +6,7 @@ import types
 TAB = '  '
 SELF_ARG = 'self__'
 PACKED_TYPES = (list, dict)
-PIPELINE_CODE = """
+PIPELINED_CODE = """
 local __PIPELINE_RESULTS = {}
 
 local __PIPE_ADD = function(key, value)
@@ -23,6 +23,9 @@ local __PIPE_GET = function(key)
   __PIPELINE_RESULTS[key] = {}
   return RETVAL
 end
+"""
+UNPIPELINED_CODE = """
+local __PIPE_ADD = function(key, value) return value end
 """
 
 # A block of Lua code consisting of LuaLine objects
@@ -332,16 +335,10 @@ class RedisFunc(object):
 
     # Generate code to unpack arguments with their correct name and type
     def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
-        # If this is the beginning of unpacking, start by also defining
-        # a variable to hold intermediate results for pipelined operations
-        if start_arg == 0:
-            arg_unpacking = PIPELINE_CODE
-        else:
-            arg_unpacking = ''
-
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
+        arg_unpacking = ''
         new_args = 0
         for i, name in enumerate(arg_names[start_arg:]):
             # Perform the lookup for class variables
@@ -404,8 +401,16 @@ class RedisFunc(object):
 
     # Register the script with the backend
     def register_script(self, client, args, method_self=None):
+        body = str(self.body)
+
+
+        # XXX This is dumb but lets us avoid most of the pipelining
+        #     overhead if we're sure that it isn't needed
+        pipeline_code = PIPELINED_CODE if '__PIPE_GET' in body \
+                                       else UNPIPELINED_CODE
+
         arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
-        code = arg_unpacking + str(self.body)
+        code = pipeline_code + arg_unpacking + body
         self.script = client.register_script(code)
 
     def __get__(self, instance, owner):
