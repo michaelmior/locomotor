@@ -1,5 +1,4 @@
 import compiler
-import hashlib
 import inspect
 import msgpack
 import types
@@ -127,11 +126,15 @@ class RedisFunc(object):
         else:
             return str(value)
 
-    # Generate a unique string we can substitute later with the value
-    def add_constant(self, expr):
-        const_name = CONST_PREFIX + hashlib.md5(str(expr)).hexdigest()[0:7]
-        self.constants[const_name] = expr
-        return const_name
+    # Get the value for a constant expression
+    def get_constant(self, expr):
+        free_idx = self.func.func_code.co_freevars.index(expr[0])
+        value = self.func.func_closure[free_idx].cell_contents
+
+        if len(expr) > 1:
+            value = getattr(value, expr[1])
+
+        return self.convert_value(value)
 
     # Generate code for a single node at a particular indentation level
     def process_node(self, node, indent=0):
@@ -160,7 +163,7 @@ class RedisFunc(object):
 
             # Uppercase names are assumed to be constants
             elif node.name.isupper():
-                name = self.add_constant((node.name,))
+                name = self.get_constant((node.name,))
 
             # Otherwise we assume a local variable
             else:
@@ -344,7 +347,7 @@ class RedisFunc(object):
                     else:
                         self.arg_names.append(expr)
             else:
-                expr = self.add_constant((obj, node.attrname))
+                expr = self.get_constant((obj, node.attrname))
 
             code.append(LuaLine(expr, node.lineno, indent))
 
@@ -456,16 +459,6 @@ class RedisFunc(object):
 
         arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
         code = pipeline_code + arg_unpacking + body
-
-        # Replace constant placeholders from the free variables in the function
-        for (const, expr) in self.constants.items():
-            free_idx = self.func.func_code.co_freevars.index(expr[0])
-            value = self.func.func_closure[free_idx].cell_contents
-
-            if len(expr) > 1:
-                value = getattr(value, expr[1])
-
-            code = code.replace(const, self.convert_value(value))
 
         self.script = client.register_script(code)
 
