@@ -250,7 +250,7 @@ class RedisFunc(object):
             # Join a table of strings
             elif node.node.attrname == 'join':
                 line = 'table.concat(%s, %s)\n' \
-                        % (self.process_node(node.node.expr).code, args)
+                        % (args, self.process_node(node.node.expr).code)
 
             # If we're calling append, add to the end of a list
             elif node.node.attrname == 'append':

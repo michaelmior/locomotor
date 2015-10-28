@@ -185,7 +185,7 @@ def test_string_replace(redis):
 def test_string_join(redis):
     @redis_server
     def join(client, arr):
-        return arr.join(', ')
+        return ', '.join(arr)
 
     assert join(redis, ['a', 'b', 'c']) == 'a, b, c'
 
