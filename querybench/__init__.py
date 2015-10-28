@@ -1,10 +1,12 @@
-import inspect
 import compiler
+import hashlib
+import inspect
 import msgpack
 import types
 
 TAB = '  '
-SELF_ARG = 'self__'
+SELF_ARG = 'SELF__'
+CONST_PREFIX = 'CONST__'
 PACKED_TYPES = (list, dict)
 PIPELINED_CODE = """
 local __PIPELINE_RESULTS = {}
@@ -100,9 +102,10 @@ class RedisFunc(object):
             if not helper:
                 self.client_arg = self.arg_names[0]
 
-        # Store helper function data
+        # Store helper function data and constants
         self.helper = helper
         self.helper_args = []
+        self.constants = {}
 
         # Strip the instance and client object parameters
         self.arg_names = list(self.arg_names[self.method + (not helper):])
@@ -121,6 +124,12 @@ class RedisFunc(object):
             return "'" + value + "'"
         else:
             return str(value)
+
+    # Generate a unique string we can substitute later with the value
+    def add_constant(self, expr):
+        const_name = CONST_PREFIX + hashlib.md5(str(expr)).hexdigest()[0:7]
+        self.constants[const_name] = expr
+        return const_name
 
     # Generate code for a single node at a particular indentation level
     def process_node(self, node, indent=0):
@@ -145,9 +154,17 @@ class RedisFunc(object):
         elif isinstance(node, compiler.ast.Name):
             # None is represented as a name, but we want nil
             if node.name == 'None':
-                node.name = 'nil'
+                name = 'nil'
 
-            code.append(LuaLine(node.name, node.lineno, indent))
+            # Uppercase names are assumed to be constants
+            elif node.name.isupper():
+                name = self.add_constant((node.name,))
+
+            # Otherwise we assume a local variable
+            else:
+                name = node.name
+
+            code.append(LuaLine(name, node.lineno, indent))
         elif isinstance(node, compiler.ast.For):
             # Get the list we are looping over
             for_list = self.process_node(node.list).code
@@ -296,19 +313,24 @@ class RedisFunc(object):
         elif isinstance(node, compiler.ast.Getattr):
             obj = self.process_node(node.expr).code
 
-            if obj != 'self':
+            # XXX Assume uppercase values are constants
+            if obj != 'self' and not node.attrname.isupper():
                 # XXX We're probably doing some external stuff we can't handle
                 raise Exception()
 
-            # Add a new argument to handle this
-            new_arg = SELF_ARG + node.attrname
-            if new_arg not in self.arg_names:
-                if self.helper:
-                    self.helper_args.append(new_arg)
-                else:
-                    self.arg_names.append(new_arg)
+            if obj == 'self':
+                # Add a new argument to handle this
+                expr = SELF_ARG + node.attrname
+                if expr not in self.arg_names:
+                    if self.helper:
+                        self.helper_args.append(expr)
+                    else:
+                        self.arg_names.append(expr)
+            else:
+                expr = self.add_constant((obj, node.attrname))
 
-            code.append(LuaLine(new_arg, node.lineno, indent))
+            code.append(LuaLine(expr, node.lineno, indent))
+
         elif isinstance(node, compiler.ast.Mod):
             op1 = self.process_node(node.left).code
             op2 = self.process_node(node.right).code
@@ -410,7 +432,6 @@ class RedisFunc(object):
     def register_script(self, client, args, method_self=None):
         body = str(self.body)
 
-
         # XXX This is dumb but lets us avoid most of the pipelining
         #     overhead if we're sure that it isn't needed
         pipeline_code = PIPELINED_CODE if '__PIPE_GET' in body \
@@ -418,6 +439,17 @@ class RedisFunc(object):
 
         arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
         code = pipeline_code + arg_unpacking + body
+
+        # Replace constant placeholders from the free variables in the function
+        for (const, expr) in self.constants.items():
+            free_idx = self.func.func_code.co_freevars.index(expr[0])
+            value = self.func.func_closure[free_idx].cell_contents
+
+            if len(expr) > 1:
+                value = getattr(value, expr[1])
+
+            code = code.replace(const, self.convert_value(value))
+
         self.script = client.register_script(code)
 
     def __get__(self, instance, owner):

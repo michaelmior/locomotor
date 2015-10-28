@@ -145,3 +145,22 @@ def test_insert(redis):
         return x[0]
 
     assert insert(redis) == 1
+
+def test_constant(redis):
+    FOO = 3
+
+    @redis_server
+    def constant(client):
+        return FOO
+
+    assert constant(redis) == 3
+
+def test_class_constant(redis):
+    class constants:
+        FOO = 3
+
+    @redis_server
+    def constant(client):
+        return constants.FOO
+
+    assert constant(redis) == 3
