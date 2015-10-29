@@ -258,3 +258,24 @@ def test_tpcc_fragment(redis):
             return None
 
     assert RedisDriver().doDelivery(redis) == None
+
+def test_multiply(redis):
+    @redis_server
+    def multiply(client, m, n):
+        return m * n
+
+    assert multiply(redis, 3, 4) == 12
+
+def test_divide(redis):
+    @redis_server
+    def divide(client, m, n):
+        return m / n
+
+    assert divide(redis, 12, 4) == 3
+
+def test_power(redis):
+    @redis_server
+    def power(client, m, n):
+        return m ** n
+
+    assert power(redis, 3, 3) == 27

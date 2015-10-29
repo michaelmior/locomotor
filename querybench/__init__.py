@@ -222,6 +222,12 @@ class RedisFunc(object):
                 op = ' - '
             elif isinstance(node.op, ast.Mod):
                 op = ' % '
+            elif isinstance(node.op, ast.Mult):
+                op = ' * '
+            elif isinstance(node.op, ast.Div):
+                op = ' / '
+            elif isinstance(node.op, ast.Pow):
+                op = ' ^ '
             else:
                 # XXX Some unhandled operator
                 print(node.op)
