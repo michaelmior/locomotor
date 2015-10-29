@@ -1,4 +1,4 @@
-import compiler
+import ast
 import inspect
 import msgpack
 import types
@@ -31,7 +31,10 @@ local __PIPE_ADD = function(key, value) return value end
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
-    def __init__(self, lines):
+    def __init__(self, lines=None):
+        if lines is None:
+            lines = []
+
         self.lines = lines
 
     @property
@@ -84,9 +87,9 @@ class RedisFunc(object):
 
         # Generate the AST and do some munging to get the node that represents
         # the body of the function which is all that we care about
-        ast = compiler.parse(self.source)
-        self.arg_names = ast.node.nodes[0].argnames
-        self.ast = ast.node.nodes[0].getChildNodes()[0]
+        self.ast = ast.parse(self.source)
+        self.arg_names = [arg.id for arg in self.ast.body[0].args.args]
+        self.ast = self.ast.body[0].body
 
         # Assume that this is a method if the first argument is self
         # This is obviously brittle, but easy and will probably work
@@ -110,7 +113,10 @@ class RedisFunc(object):
         self.arg_names = list(self.arg_names[self.method + (not helper):])
 
         # Generate the code for the body of the method
-        self.body = self.process_node(self.ast, 1 if helper else 0)
+        self.body = LuaBlock()
+        for node in self.ast:
+            block = self.process_node(node, 1 if helper else 0)
+            self.body.extend(block)
 
         # Initialize the script to None, we'll register it Later
         self.script = None
@@ -140,39 +146,38 @@ class RedisFunc(object):
     def process_node(self, node, indent=0):
         code = []
 
-        if isinstance(node, compiler.ast.Stmt):
-            for n in node.getChildNodes():
-                code.extend(self.process_node(n, indent))
-        elif isinstance(node, compiler.ast.Assign):
-            value = self.process_node(node.expr, indent).code
+        if isinstance(node, (ast.Expr, ast.Index)):
+            code.append(self.process_node(node.value, indent))
+        elif isinstance(node, ast.Assign):
+            value = self.process_node(node.value, indent).code
 
-            for var in node.nodes:
-                line = 'local %s = %s;' % (var.name, value)
+            for var in node.targets:
+                line = 'local %s = %s;' % (var.id, value)
                 code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.List):
+        elif isinstance(node, ast.List):
             line = '{' + \
-                ', '.join(self.process_node(n).code for n in node.nodes) + '}'
-            code.append(LuaLine(line, [n.lineno for n in node.nodes], indent))
-        elif isinstance(node, compiler.ast.Return):
+                ', '.join(self.process_node(n).code for n in node.elts) + '}'
+            code.append(LuaLine(line, [n.lineno for n in node.elts], indent))
+        elif isinstance(node, ast.Return):
             line = 'return ' + self.process_node(node.value).code
             code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Name):
+        elif isinstance(node, ast.Name):
             # None is represented as a name, but we want nil
-            if node.name == 'None':
+            if node.id == 'None':
                 name = 'nil'
 
             # Uppercase names are assumed to be constants
-            elif node.name.isupper():
-                name = self.get_constant((node.name,))
+            elif node.id.isupper():
+                name = self.get_constant((node.id,))
 
             # Otherwise we assume a local variable
             else:
-                name = node.name
+                name = node.id
 
             code.append(LuaLine(name, node.lineno, indent))
-        elif isinstance(node, compiler.ast.For):
+        elif isinstance(node, ast.For):
             # Get the list we are looping over
-            for_list = self.process_node(node.list).code
+            for_list = self.process_node(node.iter).code
 
             # Try to find a comma in the list
             try:
@@ -184,53 +189,67 @@ class RedisFunc(object):
             # if we were more careful, but we check for a digit followed by
             # a comma to see if this is a loop over a range or a list
             if comma_index is not False and for_list[0:comma_index].isdigit():
-                line = 'for %s=%s do' % (node.assign.name, for_list)
+                line = 'for %s=%s do' % (node.target.id, for_list)
             else:
                 line = 'for _, %s in ipairs(%s) do' % \
-                        (node.assign.name, for_list)
+                        (node.target.id, for_list)
 
             code.append(LuaLine(line, node.lineno, indent))
-            code.extend(self.process_node(node.body, indent + 1))
+            for n in node.body:
+                code.append(self.process_node(n, indent + 1))
             code.append(LuaLine('end', [], indent))
-        elif isinstance(node, compiler.ast.Discard):
-            code.extend(self.process_node(node.expr, indent))
-        elif isinstance(node, compiler.ast.UnarySub):
-            line = '-' + self.process_node(node.expr).code
+        elif isinstance(node, ast.UnaryOp):
+            if isinstance(node.op, ast.USub):
+                op = '-'
+            else:
+                # XXX Some unhandled operator
+                print(node.op)
+                raise Exception()
+
+            line = op + self.process_node(node.operand).code
             code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Sub):
-            op1 = self.process_node(node.left).code
-            op2 = self.process_node(node.right).code
-            code.append(LuaLine(op1 + ' - ' + op2, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Add):
+        elif isinstance(node, ast.BinOp):
             op1 = self.process_node(node.left).code
             op2 = self.process_node(node.right).code
 
-            # Guess if either operand is a number
-            if op1.isdigit() or op2.isdigit():
-                op = ' + '
+            if isinstance(node.op, ast.Add):
+                # Guess if either operand is a number
+                if op1.isdigit() or op2.isdigit():
+                    op = ' + '
+                else:
+                    op = ' .. '
+            elif isinstance(node.op, ast.Sub):
+                op = ' - '
+            elif isinstance(node.op, ast.Mod):
+                op = ' % '
             else:
-                op = ' .. '
+                # XXX Some unhandled operator
+                print(node.op)
+                raise Exception()
 
             line = op1 + op + op2
             code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Const):
-            line = self.convert_value(node.value)
+        elif isinstance(node, ast.Str):
+            line = self.convert_value(node.s)
             code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.CallFunc):
+        elif isinstance(node, ast.Num):
+            line = self.convert_value(node.n)
+            code.append(LuaLine(line, node.lineno, indent))
+        elif isinstance(node, ast.Call):
             # We don't support positional or keyword arguments
-            if node.star_args or node.dstar_args:
+            if node.starargs or node.kwargs:
                 raise Exception()
 
             raw_args = [self.process_node(n) for n in node.args]
             args = ', '.join(arg.code for arg in raw_args)
 
             # Handle some built-in functions
-            if isinstance(node.node, compiler.ast.Name):
-                if node.node.name == 'int':
+            if isinstance(node.func, ast.Name):
+                if node.func.id == 'int':
                     line = 'tonumber(%s)' % args
-                elif node.node.name == 'str':
+                elif node.func.id == 'str':
                     line = 'tostring(%s)' % args
-                elif node.node.name in ('range', 'xrange'):
+                elif node.func.id in ('range', 'xrange'):
                     # Extend to always use three arguments
                     if len(node.args) == 1:
                         args = '0, %s - 1, 1' % args
@@ -242,133 +261,115 @@ class RedisFunc(object):
                     # XXX We don't know how to handle this function
                     raise Exception()
 
+            # XXX We assume now that the function being called is an Attribute
+
             # Perform string replacement
-            elif node.node.attrname == 'replace':
+            elif node.func.attr == 'replace':
                 line = 'string.gsub(%s, %s)\n' \
-                        % (self.process_node(node.node.expr).code, args)
+                        % (self.process_node(node.func.value).code, args)
 
             # Join a table of strings
-            elif node.node.attrname == 'join':
+            elif node.func.attr == 'join':
                 line = 'table.concat(%s, %s)\n' \
-                        % (args, self.process_node(node.node.expr).code)
+                        % (args, self.process_node(node.func.value).code)
 
             # If we're calling append, add to the end of a list
-            elif node.node.attrname == 'append':
+            elif node.func.attr == 'append':
                 line = 'table.insert(%s, %s)' \
-                        % (self.process_node(node.node.expr).code, args)
+                        % (self.process_node(node.func.value).code, args)
 
             # If we're calling insert, add to the appropriate list position
-            elif node.node.attrname == 'insert':
+            elif node.func.attr == 'insert':
                 line = 'table.insert(%s, %s + 1, %s)\n' \
-                        % (self.process_node(node.node.expr).code,
+                        % (self.process_node(node.func.value).code,
                            raw_args[0].code, raw_args[1].code)
-            # XXX We assume now that the function being called
-            #     is a GetAttr node
 
             # Check if we have a method call
-            elif node.node.expr.name == 'self':
+            elif node.func.value.id == 'self':
                 # Add this function like a new argument
-                new_arg = SELF_ARG + node.node.attrname
+                new_arg = SELF_ARG + node.func.attr
                 if new_arg not in self.arg_names:
                     self.arg_names.append(new_arg)
 
                 line = '%s(%s)' % (new_arg, args)
 
             # XXX Assume this is a Redis pipeline execution
-            elif node.node.attrname == 'pipe':
+            elif node.func.attr == 'pipe':
                 # Do nothing to start a pipeline
                 line = ''
-            elif node.node.attrname == 'execute':
-                expr = self.process_node(node.node.expr).code
+            elif node.func.attr == 'execute':
+                expr = self.process_node(node.func.value).code
                 line = '__PIPE_GET(\'%s\')' % expr
 
             # XXX Otherwise, assume this is a redis function call
             else:
                 # Generate the Redis function call expression
-                call = 'redis.call(\'%s\', %s)' % (node.node.attrname, args)
+                call = 'redis.call(\'%s\', %s)' % (node.func.attr, args)
 
                 # Wrap the Redis call in a function which stores the
                 # result if needed later for pipelining and returns it
-                expr = self.process_node(node.node.expr).code
+                expr = self.process_node(node.func.value).code
                 line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
 
             if line:
                 code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.If):
-            # It seems that the tests array always has one element in which
-            # is a two element list that contains the test and the body of
-            # the statement
-            if len(node.tests) != 1 or len(node.tests[0]) != 2:
-                raise Exception()
-
+        elif isinstance(node, ast.If):
             # Add a line for the initial test
-            test = self.process_node(node.tests[0][0]).code
+            test = self.process_node(node.test).code
             line = 'if %s then' % test
             code.append(LuaLine(line, node.lineno, indent))
 
             # Generate the body of the if block
-            body = self.process_node(node.tests[0][1], indent + 1)
-            code.extend(body)
+            for n in node.body:
+                code.append(self.process_node(n, indent + 1))
 
             # Generate the body of the else branch
-            if node.else_ is not None:
+            if len(node.orelse) > 0:
                 code.append(LuaLine('else', [], indent))
-                else_body = self.process_node(node.else_, indent + 1)
-                code.extend(else_body)
+            for n in node.orelse:
+                code.append(self.process_node(n, indent + 1))
 
             # Close the if block
             code.append(LuaLine('end', [], indent))
-        elif isinstance(node, compiler.ast.Compare):
-            # The ops attribute should contain an array with a single element which
-            # is a two element list containing the comparison operator and the
-            # value to be compared with
-            if len(node.ops) != 1 or len(node.ops[0]) != 2:
+        elif isinstance(node, ast.Compare):
+            # XXX We only handle a single comparison
+            if len(node.ops) != 1 or len(node.comparators) != 1:
                 raise Exception()
 
-            lhs = self.process_node(node.expr).code
-            op = node.ops[0][0]
-            rhs = self.process_node(node.ops[0][1]).code
+            lhs = self.process_node(node.left).code
+
+            if isinstance(node.ops[0], ast.Eq):
+                op = ' == '
+            else:
+                # XXX We don't handle this type of comparison
+                raise Exception()
+
+            rhs = self.process_node(node.comparators[0]).code
             line = '%s %s %s' % (lhs, op, rhs)
             code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Getattr):
-            obj = self.process_node(node.expr).code
+        elif isinstance(node, ast.Attribute):
+            obj = self.process_node(node.value).code
 
             # XXX Assume uppercase values are constants
-            if obj != 'self' and not node.attrname.isupper():
+            if obj != 'self' and not node.attr.isupper():
                 # XXX We're probably doing some external stuff we can't handle
                 raise Exception()
 
             if obj == 'self':
                 # Add a new argument to handle this
-                expr = SELF_ARG + node.attrname
+                expr = SELF_ARG + node.attr
                 if expr not in self.arg_names:
                     if self.helper:
                         self.helper_args.append(expr)
                     else:
                         self.arg_names.append(expr)
             else:
-                expr = self.get_constant((obj, node.attrname))
+                expr = self.get_constant((obj, node.attr))
 
             code.append(LuaLine(expr, node.lineno, indent))
-
-        elif isinstance(node, compiler.ast.Mod):
-            op1 = self.process_node(node.left).code
-            op2 = self.process_node(node.right).code
-
-            line = op1 + ' % ' + op2
-            code.append(LuaLine(line, node.lineno, indent))
-        elif isinstance(node, compiler.ast.Subscript):
-            # XXX I'm not entirely sure what this means, but if it's not
-            #     what we expect, then we should fail to be safe
-            if node.flags != compiler.consts.OP_APPLY:
-                Exception()
-
-            # XXX No support for slices yet
-            if len(node.subs) > 0:
-                Exception
-
-            subs = ', '.join(self.process_node(n).code for n in node.subs)
-            expr = self.process_node(node.expr).code
+        elif isinstance(node, ast.Subscript):
+            subs = self.process_node(node.slice).code
+            expr = self.process_node(node.value).code
 
             # Here we check the __DICT property of the object to see if
             # it is not a dictionary in which case we add 1 to the index
@@ -378,6 +379,8 @@ class RedisFunc(object):
             code.append(LuaLine(line, node.lineno, indent))
         else:
             # XXX This type of node is not handled
+            print(ast.dump(node))
+            print(node._fields)
             raise Exception()
 
         return LuaBlock(code)
@@ -459,6 +462,7 @@ class RedisFunc(object):
 
         arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
         code = pipeline_code + arg_unpacking + body
+        print(code)
 
         self.script = client.register_script(code)
 

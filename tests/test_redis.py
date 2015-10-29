@@ -197,6 +197,13 @@ def test_newline(redis):
 
     assert newline(redis) == '\n'
 
+def test_usub(redis):
+    @redis_server
+    def usub(client, val):
+        return -val
+
+    assert usub(redis, 3) == -3
+
 def test_tpcc_fragment(redis):
     constants = imp.load_source('constants',
                                 'vendor/pytpcc/pytpcc/constants.py')
