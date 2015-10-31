@@ -134,8 +134,13 @@ class RedisFunc(object):
 
     # Get the value for a constant expression
     def get_constant(self, expr):
-        free_idx = self.func.func_code.co_freevars.index(expr[0])
-        value = self.func.func_closure[free_idx].cell_contents
+        try:
+            # Try to find this constant in the globals dictionary
+            value = self.func.func_globals[expr[0]]
+        except KeyError:
+            # Otherwise look in the function's closure
+            free_idx = self.func.func_code.co_freevars.index(expr[0])
+            value = self.func.func_closure[free_idx].cell_contents
 
         if len(expr) > 1:
             value = getattr(value, expr[1])
