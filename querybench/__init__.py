@@ -346,8 +346,11 @@ class RedisFunc(object):
 
             if isinstance(node.ops[0], ast.Eq):
                 op = ' == '
+            elif isinstance(node.ops[0], ast.NotEq):
+                op = ' != '
             else:
                 # XXX We don't handle this type of comparison
+                print(node.ops[0])
                 raise Exception()
 
             rhs = self.process_node(node.comparators[0]).code
