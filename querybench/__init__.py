@@ -386,6 +386,16 @@ class RedisFunc(object):
                     (expr, expr, subs, subs)
 
             code.append(LuaLine(line, node.lineno, indent))
+        elif isinstance(node, ast.Print):
+            # We only handle prints to stdout
+            if node.dest is not None:
+                raise Exception()
+
+            # Add a log statement for each print
+            for value in node.values:
+                value = self.process_node(value)
+                line = 'redis.log(redis.LOG_DEBUG, %s)' % value
+                code.append(LuaLine(line, node.lineno, indent))
         else:
             # XXX This type of node is not handled
             print(ast.dump(node))
