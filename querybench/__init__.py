@@ -167,9 +167,11 @@ class RedisFunc(object):
             line = 'return ' + self.process_node(node.value).code
             code.append(LuaLine(line, node.lineno, indent))
         elif isinstance(node, ast.Name):
-            # None is represented as a name, but we want nil
+            # Replace common constants (assuming they are not redefined)
             if node.id == 'None':
                 name = 'nil'
+            elif node.id in ('True', 'False'):
+                name = node.id.lower()
 
             # Uppercase names are assumed to be constants
             elif node.id.isupper():
@@ -203,6 +205,20 @@ class RedisFunc(object):
             for n in node.body:
                 code.append(self.process_node(n, indent + 1))
             code.append(LuaLine('end', [], indent))
+        elif isinstance(node, ast.BoolOp):
+            values = ['(' + self.process_node(n).code + ')'
+                      for n in node.values]
+
+            if isinstance(node.op, ast.Or):
+                op = ' or '
+            elif isinstance(node.op, ast.And):
+                op = ' and '
+            else:
+                # XXX Some unhandled operator
+                print(node.op)
+                raise Exception()
+
+            code.append(LuaLine(op.join(values), node.lineno, indent))
         elif isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.USub):
                 op = '-'

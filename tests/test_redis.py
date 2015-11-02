@@ -279,3 +279,17 @@ def test_power(redis):
         return m ** n
 
     assert power(redis, 3, 3) == 27
+
+def test_or(redis):
+    @redis_server
+    def bool_or(client):
+        return True or False
+
+    assert bool_or(redis)
+
+def test_and(redis):
+    @redis_server
+    def bool_and(client):
+        return True and False
+
+    assert not bool_and(redis)
