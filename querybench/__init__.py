@@ -1,5 +1,7 @@
 import ast
+import collections
 import inspect
+import itertools
 import msgpack
 import sully
 import types
@@ -29,6 +31,25 @@ end
 UNPIPELINED_CODE = """
 local __PIPE_ADD = function(key, value) return value end
 """
+# The constants below are used when trying to identify Redis client objects
+REDIS_METHODS = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr',
+                     'delete', 'exists', 'expire', 'expireat', 'get', 'getbit',
+                     'getset', 'hdel', 'hgetall', 'hincrby', 'hkeys', 'hlen',
+                     'hmget', 'hmset', 'hset', 'hsetnx', 'hvals', 'incr',
+                     'lindex', 'linsert', 'llen', 'lpop', 'lpush', 'lpushnx',
+                     'lrem', 'lset', 'ltrim', 'mget', 'move', 'mset', 'mset',
+                     'msetnx', 'persist', 'publish', 'randomkey', 'rename',
+                     'renamenx', 'rpop', 'rpoplpush', 'rpush', 'rpushx',
+                     'sadd', 'scard', 'sdiff', 'sdiffstore', 'set', 'setbit',
+                     'setex', 'setnx', 'setrange', 'sinter', 'sinterstore',
+                     'sismember', 'smembers', 'smove', 'sort', 'spop',
+                     'srandmember', 'srem', 'strlen', 'substr', 'sunion',
+                     'sunionstore', 'ttl', 'zadd', 'zcard', 'zincrby',
+                     'zinterstore', 'zrange', 'zrangebyscore', 'zrank', 'zrem',
+                     'zremrangebyrank', 'zrevrange' ,'zrevrangebyscore',
+                     'zrevrank', 'zrevscore', 'zunionstore'])
+REDIS_METHOD_COUNT = 2
+REDIS_METHOD_PCT = 0.8
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
@@ -541,3 +562,46 @@ class RedisFunc(object):
         return self.script(args=args)
 
 redis_server = RedisFunc
+
+def identify_redis(func):
+    redis_func_objs = []
+    nonredis_func_objs = []
+    func_ast = sully.get_func_ast(func)
+    node_walkers = (ast.walk(func_node) for func_node in func_ast)
+    for node in itertools.chain.from_iterable(node_walkers):
+        # Skip any nodes which are not function calls on objects
+        if not (isinstance(node, ast.Call) and
+                isinstance(node.func, ast.Attribute)):
+            continue
+
+        # Record all function calls
+        if node.func.attr in REDIS_METHODS:
+            redis_func_objs.append(node.func.value)
+        else:
+            nonredis_func_objs.append(node.func.value)
+
+    # Loop through all the found function objects to pick
+    # out the ones we deem to represent Redis interfaces
+    redis_objs = []
+    while len(redis_func_objs) > 0:
+        obj = redis_func_objs.pop()
+
+        # Remove all call nodes matching this object
+        redis_before = len(redis_func_objs) + 1
+        redis_func_objs = [obj2 for obj2 in redis_func_objs
+                if not sully.nodes_equal(obj, obj2)]
+
+        nonredis_before = len(nonredis_func_objs)
+        nonredis_func_objs = [obj2 for obj2 in nonredis_func_objs
+                if not sully.nodes_equal(obj, obj2)]
+
+        # If the object meets a threshold of calls for the object
+        # and a certain percentage of all calls match, record it
+        redis_calls = redis_before - len(redis_func_objs)
+        nonredis_calls = nonredis_before - len(nonredis_func_objs)
+        if redis_calls >= REDIS_METHOD_COUNT and \
+           (redis_calls * 1.0 /
+                   (redis_calls + nonredis_calls)) >= REDIS_METHOD_PCT:
+           redis_objs.append(obj)
+
+    return redis_objs
