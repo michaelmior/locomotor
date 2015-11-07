@@ -1,6 +1,7 @@
 import ast
 import inspect
 import msgpack
+import sully
 import types
 
 TAB = '  '
@@ -80,10 +81,7 @@ class RedisFunc(object):
         self.func = func
 
         # Get the source code and strip whitespace and decorators
-        source = inspect.getsourcelines(func)[0]
-        spaces = len(source[0]) - len(source[0].lstrip())
-        source = [line[spaces:] for line in source if not line.isspace()]
-        self.source = ''.join(line for line in source if line[0] != '@')
+        self.source = sully.get_func_source(func)
 
         # Generate the AST and do some munging to get the node that represents
         # the body of the function which is all that we care about
