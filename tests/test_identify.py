@@ -2,8 +2,13 @@ import ast
 import imp
 import pytest
 import sully
+import sys
 
 from querybench import identify_redis
+
+sys.path.insert(0, 'vendor/pytpcc')
+sys.path.insert(0, 'vendor/pytpcc/pytpcc')
+from pytpcc.drivers import redisdriver
 
 
 def test_no_evidence():
@@ -33,15 +38,6 @@ def test_good_evidence():
     assert len(identify_redis(yes_redis)) == 1
 
 def test_tpcc_fragment():
-    constants = imp.load_source('constants',
-                                'vendor/pytpcc/pytpcc/constants.py')
-    abstractdriver = imp.load_source('abstractdriver',
-                                     'vendor/pytpcc/pytpcc/drivers/' \
-                                             'abstractdriver.py')
-    redisdriver = imp.load_source('redisdriver',
-                                  'vendor/pytpcc/pytpcc/drivers/' \
-                                          'redisdriver.py')
-
     objs = identify_redis(redisdriver.RedisDriver.doDelivery)
     assert sully.nodes_equal(ast.Name(id='wtr', ctx=ast.Load()), objs[0])
     assert sully.nodes_equal(ast.Name(id='rdr', ctx=ast.Load()), objs[1])
