@@ -564,7 +564,7 @@ class RedisFunc(object):
 
 redis_server = RedisFunc
 
-def identify_redis(func):
+def identify_redis_objs(func):
     redis_func_objs = []
     nonredis_func_objs = []
     func_ast = sully.get_func_ast(func)
@@ -606,3 +606,26 @@ def identify_redis(func):
            redis_objs.append(obj)
 
     return redis_objs
+
+# Identify functions in a class or module which use Redis
+def identify_redis_funcs(cls_or_mod):
+    redis_funcs = {}
+
+    for obj in dir(cls_or_mod):
+        # Skip things which look private
+        if obj.startswith('_'):
+            continue
+
+        val = getattr(cls_or_mod, obj)
+
+        if isinstance(val, (types.ClassType)):
+            # Recursively check all classes
+            class_funcs = identify_redis_funcs(cls_or_mod)
+            redis_funcs.update(class_funcs)
+        elif isinstance(val, (types.FunctionType, types.MethodType)):
+            # Identify Redis objects within the function
+            objs = identify_redis_objs(val)
+            if len(objs) > 0:
+                redis_funcs[val] = objs
+
+    return redis_funcs
