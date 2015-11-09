@@ -95,16 +95,10 @@ class LuaLine(object):
 
 class RedisFunc(object):
     def __init__(self, func, helper=False):
-        self.func = func
+        self.taint = sully.TaintAnalysis(func)
 
-        # Get the source code and strip whitespace and decorators
-        self.source = sully.get_func_source(func)
-
-        # Generate the AST and do some munging to get the node that represents
-        # the body of the function which is all that we care about
-        self.ast = ast.parse(self.source)
-        self.arg_names = [arg.id for arg in self.ast.body[0].args.args]
-        self.ast = self.ast.body[0].body
+        # Extract the function arguments
+        self.arg_names = [arg.id for arg in self.taint.func_ast.body[0].args.args]
 
         # Assume that this is a method if the first argument is self
         # This is obviously brittle, but easy and will probably work
@@ -129,7 +123,7 @@ class RedisFunc(object):
 
         # Generate the code for the body of the method
         self.body = LuaBlock()
-        for node in self.ast:
+        for node in self.taint.func_ast.body[0].body:
             block = self.process_node(node, 1 if helper else 0)
             self.body.extend(block)
 
@@ -151,11 +145,11 @@ class RedisFunc(object):
     def get_constant(self, expr):
         try:
             # Try to find this constant in the globals dictionary
-            value = self.func.func_globals[expr[0]]
+            value = self.taint.func.func_globals[expr[0]]
         except KeyError:
             # Otherwise look in the function's closure
-            free_idx = self.func.func_code.co_freevars.index(expr[0])
-            value = self.func.func_closure[free_idx].cell_contents
+            free_idx = self.taint.func.func_code.co_freevars.index(expr[0])
+            value = self.taint.func.func_closure[free_idx].cell_contents
 
         if len(expr) > 1:
             value = getattr(value, expr[1])

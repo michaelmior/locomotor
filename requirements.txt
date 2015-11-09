@@ -2,5 +2,5 @@ msgpack-python==0.4.6
 psycopg2==2.6.1
 pymongo==3.0.3
 redis==2.10.3
--e git+git@github.com:michaelmior/sully.git@06206d5424bd07bf5c20c8b1fa53b601ba594a47#egg=sully-master
+-e git+git@github.com:michaelmior/sully.git@42cb7fb55ca9e6733f6a7e26fe42b281712d70e9#egg=sully-master
 wheel==0.24.0
