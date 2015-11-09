@@ -68,7 +68,8 @@ class LuaBlock(object):
         self.lines.append(line)
 
     def extend(self, block):
-        self.lines.extend(line for line in block.lines)
+        for line in block.lines:
+            self.append(line)
 
     def __getitem__(self, *args):
         return self.lines.__getitem__(*args)
