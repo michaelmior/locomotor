@@ -85,15 +85,9 @@ class LuaBlock(object):
 
 # A line of Lua code which knows the line numbers of the corresponding Python
 class LuaLine(object):
-    def __init__(self, code, linenos=[], indent=0):
+    def __init__(self, code, node=None, indent=0):
         self.code = code
-
-        # Store the line numbers this code comes from
-        if isinstance(linenos, list):
-            self.linenos = linenos
-        else:
-            self.linenos = [linenos]
-
+        self.node = node
         self.indent = indent
 
     def __str__(self):
@@ -179,14 +173,14 @@ class RedisFunc(object):
 
             for var in node.targets:
                 line = 'local %s = %s;' % (var.id, value)
-                code.append(LuaLine(line, node.lineno, indent))
+                code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.List):
             line = '{' + \
                 ', '.join(self.process_node(n).code for n in node.elts) + '}'
-            code.append(LuaLine(line, [n.lineno for n in node.elts], indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Return):
             line = 'return ' + self.process_node(node.value).code
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Name):
             # Replace common constants (assuming they are not redefined)
             if node.id == 'None':
@@ -202,7 +196,7 @@ class RedisFunc(object):
             else:
                 name = node.id
 
-            code.append(LuaLine(name, node.lineno, indent))
+            code.append(LuaLine(name, node, indent))
         elif isinstance(node, ast.For):
             # Get the list we are looping over
             for_list = self.process_node(node.iter).code
@@ -222,7 +216,7 @@ class RedisFunc(object):
                 line = 'for _, %s in ipairs(%s) do' % \
                         (node.target.id, for_list)
 
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
             for n in node.body:
                 code.append(self.process_node(n, indent + 1))
             code.append(LuaLine('end', [], indent))
@@ -239,7 +233,7 @@ class RedisFunc(object):
                 print(node.op)
                 raise Exception()
 
-            code.append(LuaLine(op.join(values), node.lineno, indent))
+            code.append(LuaLine(op.join(values), node, indent))
         elif isinstance(node, ast.UnaryOp):
             if isinstance(node.op, ast.USub):
                 op = '-'
@@ -249,7 +243,7 @@ class RedisFunc(object):
                 raise Exception()
 
             line = op + self.process_node(node.operand).code
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.BinOp):
             op1 = self.process_node(node.left).code
             op2 = self.process_node(node.right).code
@@ -276,13 +270,13 @@ class RedisFunc(object):
                 raise Exception()
 
             line = op1 + op + op2
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Str):
             line = self.convert_value(node.s)
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Num):
             line = self.convert_value(node.n)
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Call):
             # We don't support positional or keyword arguments
             if node.starargs or node.kwargs:
@@ -360,12 +354,12 @@ class RedisFunc(object):
                 line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
 
             if line:
-                code.append(LuaLine(line, node.lineno, indent))
+                code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.If):
             # Add a line for the initial test
             test = self.process_node(node.test).code
             line = 'if %s then' % test
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
 
             # Generate the body of the if block
             for n in node.body:
@@ -397,7 +391,7 @@ class RedisFunc(object):
 
             rhs = self.process_node(node.comparators[0]).code
             line = '%s %s %s' % (lhs, op, rhs)
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Attribute):
             obj = self.process_node(node.value).code
 
@@ -417,7 +411,7 @@ class RedisFunc(object):
             else:
                 expr = self.get_constant((obj, node.attr))
 
-            code.append(LuaLine(expr, node.lineno, indent))
+            code.append(LuaLine(expr, node, indent))
         elif isinstance(node, ast.Subscript):
             subs = self.process_node(node.slice).code
             expr = self.process_node(node.value).code
@@ -427,7 +421,7 @@ class RedisFunc(object):
             line = '%s[(%s.__DICT) and (%s) or (%s + 1)]' % \
                     (expr, expr, subs, subs)
 
-            code.append(LuaLine(line, node.lineno, indent))
+            code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Print):
             # We only handle prints to stdout
             if node.dest is not None:
@@ -437,7 +431,7 @@ class RedisFunc(object):
             for value in node.values:
                 value = self.process_node(value)
                 line = 'redis.log(redis.LOG_DEBUG, %s)' % value
-                code.append(LuaLine(line, node.lineno, indent))
+                code.append(LuaLine(line, node, indent))
         else:
             # XXX This type of node is not handled
             print(ast.dump(node))
