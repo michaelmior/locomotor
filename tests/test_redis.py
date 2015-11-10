@@ -40,6 +40,7 @@ def test_add_link(redis):
 
     assert add_link(redis, 'foo') == 1
     assert add_link(redis, 'bar') == 2
+    assert add_link.__name__ == 'add_link'
 
 def test_increx(redis):
     class Foo:
@@ -97,6 +98,7 @@ def test_function(redis):
 
     redis.set('foofunc1', 'bar')
     assert Foo().get_decorated(redis, 'foofunc') == 'bar'
+    assert Foo().get_decorated.__name__ == 'get_decorated'
 
 def test_shard(redis):
     class Foo:

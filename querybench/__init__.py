@@ -1,5 +1,6 @@
 import ast
 import collections
+import functools
 import inspect
 import itertools
 import msgpack
@@ -527,6 +528,7 @@ class RedisFunc(object):
     def __get__(self, instance, owner):
         # We need a descriptor here to get the class instance then we
         # just stick it as the first argument we pass to __call__
+        @functools.wraps(self.taint.func)
         def inner(*args):
             return self.__call__(instance, *args)
 
@@ -563,7 +565,7 @@ class RedisFunc(object):
 # Create a function decorator which converts a function to run on the server
 def redis_server(method=None, redis_objs=None):
     def decorator(method):
-        return RedisFunc(method, redis_objs)
+        return functools.update_wrapper(RedisFunc(method, redis_objs), method)
 
     return decorator(method) if method else decorator
 
