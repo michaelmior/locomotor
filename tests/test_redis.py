@@ -1,3 +1,4 @@
+import ast
 import imp
 import pytest
 
@@ -90,7 +91,7 @@ def test_function(redis):
         def decorate_key(self, key):
             return key + self.KEY_SUFFIX
 
-        @redis_server
+        @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
         def get_decorated(self, client, key):
             return client.get(self.decorate_key(key))
 
@@ -125,7 +126,7 @@ def test_dict(redis):
     assert foo(redis, {'a': 1, 'b': 2}, 'b') == 2
 
 def test_execute(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def pipe(client, key1, key2):
         client.pipe()
         client.get(key1)

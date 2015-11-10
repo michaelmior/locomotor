@@ -37,11 +37,11 @@ REDIS_METHODS = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr',
                      'get', 'getbit', 'getset', 'hdel', 'hget', 'hgetall',
                      'hincrby', 'hkeys', 'hlen', 'hmget', 'hmset', 'hset',
                      'hsetnx', 'hvals', 'incr', 'lindex', 'linsert', 'llen',
-                     'lpop', 'lpush', 'lpushnx', 'lrem', 'lset', 'ltrim',
-                     'mget', 'move', 'mset', 'mset', 'msetnx', 'persist',
-                     'publish', 'randomkey', 'rename', 'renamenx', 'rpop',
-                     'rpoplpush', 'rpush', 'rpushx', 'sadd', 'scard', 'sdiff',
-                     'sdiffstore', 'set', 'setbit', 'setex', 'setnx',
+                     'lpop', 'lpush', 'lpushnx', 'lrange', 'lrem', 'lset',
+                     'ltrim', 'mget', 'move', 'mset', 'mset', 'msetnx',
+                     'persist', 'publish', 'randomkey', 'rename', 'renamenx',
+                     'rpop', 'rpoplpush', 'rpush', 'rpushx', 'sadd', 'scard',
+                     'sdiff', 'sdiffstore', 'set', 'setbit', 'setex', 'setnx',
                      'setrange', 'sinter', 'sinterstore', 'sismember',
                      'smembers', 'smove', 'sort', 'spop', 'srandmember',
                      'srem', 'strlen', 'substr', 'sunion', 'sunionstore',
@@ -94,8 +94,12 @@ class LuaLine(object):
         return TAB * self.indent + self.code + '\n'
 
 class RedisFunc(object):
-    def __init__(self, func, helper=False):
+    def __init__(self, func, redis_objs=None, helper=False):
         self.taint = sully.TaintAnalysis(func)
+        if redis_objs:
+            self.redis_objs = redis_objs
+        else:
+            self.redis_objs = identify_redis_objs(func)
 
         # Extract the function arguments
         self.arg_names = [arg.id for arg in self.taint.func_ast.body[0].args.args]
@@ -338,7 +342,8 @@ class RedisFunc(object):
                 line = '__PIPE_GET(\'%s\')' % expr
 
             # XXX Otherwise, assume this is a redis function call
-            else:
+            elif any(sully.nodes_equal(node.func.value, obj)
+                    for obj in self.redis_objs):
                 # Generate the Redis function call expression
                 call = 'redis.call(\'%s\', %s)' % (node.func.attr, args)
 
@@ -346,6 +351,10 @@ class RedisFunc(object):
                 # result if needed later for pipelining and returns it
                 expr = self.process_node(node.func.value).code
                 line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
+            else:
+                # XXX Something we can't handle
+                print(ast.dump(node))
+                raise Exception()
 
             if line:
                 code.append(LuaLine(line, node, indent))
@@ -551,7 +560,12 @@ class RedisFunc(object):
 
         return self.script(args=args)
 
-redis_server = RedisFunc
+# Create a function decorator which converts a function to run on the server
+def redis_server(method=None, redis_objs=None):
+    def decorator(method):
+        return RedisFunc(method, redis_objs)
+
+    return decorator(method) if method else decorator
 
 def identify_redis_objs(func):
     redis_func_objs = []
