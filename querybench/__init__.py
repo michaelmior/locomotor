@@ -139,7 +139,6 @@ class RedisFunc(object):
 
         # Store helper function data and constants
         self.helper = helper
-        self.helper_args = []
         self.constants = {}
 
         # Generate the code for the body of the method
@@ -445,13 +444,8 @@ class RedisFunc(object):
                 raise Exception()
 
             if obj == 'self':
-                # Add a new argument to handle this
+                # Use a new argument to handle this
                 expr = SELF_ARG + node.attr
-                if expr not in self.arg_names:
-                    if self.helper:
-                        self.helper_args.append(expr)
-                    else:
-                        self.arg_names.append(expr)
             else:
                 expr = self.get_constant((obj, node.attr))
 
