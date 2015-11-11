@@ -93,8 +93,9 @@ class LuaLine(object):
     def __str__(self):
         return TAB * self.indent + self.code + '\n'
 
-class RedisFunc(object):
-    def __init__(self, taint, redis_objs=None, helper=False):
+class RedisFuncFragment(object):
+    def __init__(self, taint, minlineno=None, maxlineno=None,
+                 redis_objs=None, helper=False):
         self.taint = taint
         if redis_objs:
             self.redis_objs = redis_objs
@@ -114,8 +115,10 @@ class RedisFunc(object):
         self.helpers = self.taint.functions_in_range(None, None)
 
         # Get the expressions we need to bring in and out of this block
-        minlineno = body_ast.minlineno
-        maxlineno = body_ast.maxlineno
+        if not minlineno:
+            minlineno = body_ast.minlineno
+        if not maxlineno:
+            maxlineno = body_ast.maxlineno
         self.in_exprs, self.out_exprs = sully.block_inout(self.taint.func_ast,
                                                           minlineno, maxlineno)
 
@@ -490,7 +493,7 @@ class RedisFunc(object):
             #     the instance
             method = getattr(method_self, method_name[1])
             taint = sully.TaintAnalysis(method)
-            wrapped = RedisFunc(taint, helper=True)
+            wrapped = RedisFuncFragment(taint, helper=True)
 
             # Add any newly discovered expressions which are required
             for in_expr in wrapped.in_exprs:
@@ -602,7 +605,8 @@ class RedisFunc(object):
 def redis_server(method=None, redis_objs=None):
     def decorator(method):
         taint = sully.TaintAnalysis(method)
-        return functools.update_wrapper(RedisFunc(taint, redis_objs), method)
+        fragment = RedisFuncFragment(taint, redis_objs=redis_objs)
+        return functools.update_wrapper(fragment, method)
 
     return decorator(method) if method else decorator
 
