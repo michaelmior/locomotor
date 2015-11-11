@@ -9,7 +9,6 @@ import types
 
 TAB = '  '
 SELF_ARG = 'SELF__'
-CONST_PREFIX = 'CONST__'
 PACKED_TYPES = (list, dict)
 PIPELINED_CODE = """
 local __PIPELINE_RESULTS = {}
