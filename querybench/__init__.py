@@ -107,17 +107,7 @@ class RedisFunc(object):
 
         # Assume that this is a method if the first argument is self
         # This is obviously brittle, but easy and will probably work
-        self.client_arg = None
-        if self.arg_names[0] == 'self':
-            self.method = True
-
-            if not helper:
-                self.client_arg = self.arg_names[1]
-        else:
-            self.method = False
-
-            if not helper:
-                self.client_arg = self.arg_names[0]
+        self.method = self.arg_names[0] == 'self'
 
         # Strip the instance and client object parameters
         self.arg_names = list(self.arg_names[self.method + (not helper):])
@@ -133,8 +123,9 @@ class RedisFunc(object):
         # (self, foo) to SELF__foo
         self.in_exprs.difference_update(self.arg_names)
         self.in_exprs = self.arg_names + self.rename_expressions(self.in_exprs)
-        if self.client_arg and self.client_arg in self.in_exprs:
-            self.in_exprs.remove(self.client_arg)
+        for obj in self.redis_objs:
+            if isinstance(obj, ast.Name) and obj.id in self.in_exprs:
+                self.in_exprs.remove(obj.id)
         self.out_exprs = self.rename_expressions(self.out_exprs)
 
         # Store helper function data and constants
