@@ -124,6 +124,7 @@ class RedisFunc(object):
 
         # Strip the instance and client object parameters
         self.arg_names = list(self.arg_names[self.method + (not helper):])
+        self.helpers = self.taint.functions_in_range(None, None)
 
         # Generate the code for the body of the method
         self.body = LuaBlock()
@@ -337,12 +338,7 @@ class RedisFunc(object):
 
             # Check if we have a method call
             elif node.func.value.id == 'self':
-                # Add this function like a new argument
-                new_arg = SELF_ARG + node.func.attr
-                if new_arg not in self.arg_names:
-                    self.arg_names.append(new_arg)
-
-                line = '%s(%s)' % (new_arg, args)
+                line = '%s(%s)' % (SELF_ARG + node.func.attr, args)
 
             # XXX Assume this is a Redis pipeline execution
             elif node.func.attr == 'pipe':
@@ -455,12 +451,38 @@ class RedisFunc(object):
         return LuaBlock(code)
 
     # Generate code to unpack arguments with their correct name and type
-    def unpack_args(self, args, arg_names, start_arg=0, method_self=None):
+    def unpack_args(self, args, arg_names, start_arg=0, helpers=[],
+                    method_self=None):
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
         arg_unpacking = ''
         new_args = 0
+
+        # Generate code for all helper functions
+        helper_functions = ''
+        for method_name in helpers:
+            # We only need to deal with helper functions
+            if method_name[0] != 'self':
+                continue
+
+            # XXX We currently assume that methods called by the method
+            #     we're translating do not access any attributes of
+            #     the instance
+            method = getattr(method_self, method_name[1])
+            wrapped = RedisFunc(method, helper=True)
+
+            # Add any new args which come from the current object
+            # to the list of arguments for helper functions
+            for new_arg in wrapped.helper_args:
+                if new_arg not in arg_names:
+                    arg_names.append(new_arg)
+                    new_args += 1
+            # Dump the helper function code into a local variable
+            helper_functions += 'local %s = function(%s)\n%s\nend\n' % \
+                    (SELF_ARG + method_name[1],
+                            ', '.join(wrapped.arg_names), wrapped.body)
+
         for i, name in enumerate(arg_names[start_arg:]):
             # Perform the lookup for class variables
             # We should be able to extend this to support multiple lookups
@@ -470,28 +492,8 @@ class RedisFunc(object):
             else:
                 arg = args[i + start_arg]
 
-            # Generate code for methods called within this method
-            if isinstance(arg, types.MethodType):
-                # XXX We currently assume that methods called by the method
-                #     we're translating do not access any attributes of
-                #     the instance
-                wrapped = RedisFunc(arg, helper=True)
-
-                # Add any new args which come from the current object
-                # to the list of arguments for helper functions
-                for new_arg in wrapped.helper_args:
-                    if new_arg not in arg_names:
-                        arg_names.append(new_arg)
-                        new_args += 1
-
-                # Dump the helper function code into a local variable
-                arg_unpacking += 'local %s = function(%s)\n%s\nend\n' % \
-                        (self.arg_names[i + start_arg],
-                         ', '.join(wrapped.arg_names), wrapped.body)
-                continue
-
-            # Convert numbers from string form
-            elif isinstance(arg, (int, long, float)):
+            if isinstance(arg, (int, long, float)):
+                # Convert numbers from string form
                 conversion = 'tonumber'
             elif isinstance(arg, PACKED_TYPES):
                 conversion = 'cmsgpack.unpack'
@@ -512,12 +514,12 @@ class RedisFunc(object):
             # Args is passed through as an empty array since all of them
             # must be pulled from method_self anyway
             helper_unpacking = self.unpack_args([], arg_names,
-                                                start_arg + new_args,
+                                                start_arg + new_args, [],
                                                 method_self)
         else:
             helper_unpacking = ''
 
-        return helper_unpacking + arg_unpacking
+        return helper_unpacking + arg_unpacking + helper_functions
 
 
     # Register the script with the backend
@@ -529,7 +531,8 @@ class RedisFunc(object):
         pipeline_code = PIPELINED_CODE if '__PIPE_GET' in body \
                                        else UNPIPELINED_CODE
 
-        arg_unpacking = self.unpack_args(args, self.arg_names, 0, method_self)
+        arg_unpacking = self.unpack_args(args, self.arg_names, 0,
+                                         self.helpers, method_self)
         code = pipeline_code + arg_unpacking + body
         print(code)
 
