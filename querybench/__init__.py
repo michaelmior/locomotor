@@ -101,11 +101,13 @@ class RedisFunc(object):
         else:
             self.redis_objs = identify_redis_objs(func)
 
-        # Extract the function arguments
-        self.arg_names = [arg.id for arg in self.taint.func_ast.body[0].args.args]
+        # Get argument names
+        body_ast = self.taint.func_ast.body[0]
+        self.arg_names = [arg.id for arg in body_ast.args.args]
 
         # Assume that this is a method if the first argument is self
         # This is obviously brittle, but easy and will probably work
+        self.client_arg = None
         if self.arg_names[0] == 'self':
             self.method = True
 
@@ -117,14 +119,28 @@ class RedisFunc(object):
             if not helper:
                 self.client_arg = self.arg_names[0]
 
+        # Strip the instance and client object parameters
+        self.arg_names = list(self.arg_names[self.method + (not helper):])
+        self.helpers = self.taint.functions_in_range(None, None)
+
+        # Get the expressions we need to bring in and out of this block
+        minlineno = body_ast.minlineno
+        maxlineno = body_ast.maxlineno
+        self.in_exprs, self.out_exprs = sully.block_inout(self.taint.func_ast,
+                                                          minlineno, maxlineno)
+
+        # Rename the expressions to change things like
+        # (self, foo) to SELF__foo
+        self.in_exprs.difference_update(self.arg_names)
+        self.in_exprs = self.arg_names + self.rename_expressions(self.in_exprs)
+        if self.client_arg and self.client_arg in self.in_exprs:
+            self.in_exprs.remove(self.client_arg)
+        self.out_exprs = self.rename_expressions(self.out_exprs)
+
         # Store helper function data and constants
         self.helper = helper
         self.helper_args = []
         self.constants = {}
-
-        # Strip the instance and client object parameters
-        self.arg_names = list(self.arg_names[self.method + (not helper):])
-        self.helpers = self.taint.functions_in_range(None, None)
 
         # Generate the code for the body of the method
         self.body = LuaBlock()
@@ -134,6 +150,24 @@ class RedisFunc(object):
 
         # Initialize the script to None, we'll register it Later
         self.script = None
+
+    # Rename all expressions in a list to their appropriate names
+    def rename_expressions(self, expressions):
+        outlist = []
+        for expr in expressions:
+            if isinstance(expr, tuple):
+                if expr[0] == 'self':
+                    outlist.append(SELF_ARG + expr[1])
+                elif expr[1].upper():
+                    # Delete constants we don't need
+                    continue
+                elif not expr[1].upper():
+                    # XXX This value is not supported
+                    raise Exception()
+            else:
+                outlist.append(expr)
+
+        return outlist
 
     # Convert the value to a string representation in Lua
     def convert_value(self, value):
@@ -451,7 +485,7 @@ class RedisFunc(object):
         return LuaBlock(code)
 
     # Generate code to unpack arguments with their correct name and type
-    def unpack_args(self, args, arg_names, start_arg=0, helpers=[],
+    def unpack_args(self, args, start_arg=0, helpers=[],
                     method_self=None):
         # Unpack arguments to their original names performing
         # any necessary type conversions
@@ -472,18 +506,19 @@ class RedisFunc(object):
             method = getattr(method_self, method_name[1])
             wrapped = RedisFunc(method, helper=True)
 
-            # Add any new args which come from the current object
-            # to the list of arguments for helper functions
-            for new_arg in wrapped.helper_args:
-                if new_arg not in arg_names:
-                    arg_names.append(new_arg)
+            # Add any newly discovered expressions which are required
+            for in_expr in wrapped.in_exprs:
+                if in_expr not in wrapped.arg_names and \
+                   in_expr not in self.in_exprs:
+                    self.in_exprs.append(in_expr)
                     new_args += 1
+
             # Dump the helper function code into a local variable
             helper_functions += 'local %s = function(%s)\n%s\nend\n' % \
                     (SELF_ARG + method_name[1],
                             ', '.join(wrapped.arg_names), wrapped.body)
 
-        for i, name in enumerate(arg_names[start_arg:]):
+        for i, name in enumerate(self.in_exprs[start_arg:]):
             # Perform the lookup for class variables
             # We should be able to extend this to support multiple lookups
             # i.e., self.foo.bar
@@ -501,20 +536,19 @@ class RedisFunc(object):
                 conversion = ''
 
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
-                    (arg_names[i + start_arg], conversion ,i + start_arg + 1)
+                    (self.in_exprs[i + start_arg], conversion ,i + start_arg + 1)
 
             # Track if this is a dictionary so we know if we
             # need to add one to indexes into the Lua table
             if isinstance(arg, dict):
                 arg_unpacking += '%s.__DICT = true\n' % \
-                        arg_names[i + start_arg]
+                        self.in_exprs[i + start_arg]
 
         # Expand any necessary helper arguments
         if new_args > 0:
             # Args is passed through as an empty array since all of them
             # must be pulled from method_self anyway
-            helper_unpacking = self.unpack_args([], arg_names,
-                                                start_arg + new_args, [],
+            helper_unpacking = self.unpack_args([], start_arg + new_args, [],
                                                 method_self)
         else:
             helper_unpacking = ''
@@ -531,8 +565,7 @@ class RedisFunc(object):
         pipeline_code = PIPELINED_CODE if '__PIPE_GET' in body \
                                        else UNPIPELINED_CODE
 
-        arg_unpacking = self.unpack_args(args, self.arg_names, 0,
-                                         self.helpers, method_self)
+        arg_unpacking = self.unpack_args(args, 0, self.helpers, method_self)
         code = pipeline_code + arg_unpacking + body
         print(code)
 
@@ -565,7 +598,7 @@ class RedisFunc(object):
 
         # Add arguments which are pulled from the class instance
         args += [getattr(method_self, attr[len(SELF_ARG):]) \
-                for attr in self.arg_names \
+                for attr in self.in_exprs \
                 if attr.startswith(SELF_ARG)]
 
         # Dump the necessary arguments with msgpack
