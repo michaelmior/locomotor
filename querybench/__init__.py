@@ -178,7 +178,13 @@ class RedisFunc(object):
                 ', '.join(self.process_node(n).code for n in node.elts) + '}'
             code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Return):
-            line = 'return ' + self.process_node(node.value).code
+            retval = self.process_node(node.value).code
+
+            # If this is the final return value, pack it up with cmsgpack
+            if self.helper:
+                line = 'return %s' % retval
+            else:
+                line = 'return cmsgpack.pack(%s)' % retval
             code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Name):
             # Replace common constants (assuming they are not redefined)
@@ -305,8 +311,13 @@ class RedisFunc(object):
             # XXX We assume now that the function being called is an Attribute
 
             # Perform string replacement
+            # XXX This is somewhat annoying but we have to wrap this up in an
+            #     anonymous function to avoid accidentally capturing the second
+            #     value produced by gsub when this expression is used later
             elif node.func.attr == 'replace':
-                line = 'string.gsub(%s, %s)\n' \
+                line = '((function() local __RETVAL, _; ' \
+                       '__RETVAL, _ = string.gsub(%s, %s); ' \
+                       'return __RETVAL end)())' \
                         % (self.process_node(node.func.value).code, args)
 
             # Join a table of strings
@@ -560,7 +571,11 @@ class RedisFunc(object):
             if isinstance(args[i], PACKED_TYPES):
                 args[i] = msgpack.dumps(args[i])
 
-        return self.script(args=args)
+        retval = self.script(args=args)
+        if retval is None:
+            return None
+        else:
+            return msgpack.loads(retval)
 
 # Create a function decorator which converts a function to run on the server
 def redis_server(method=None, redis_objs=None):

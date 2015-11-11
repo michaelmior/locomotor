@@ -61,12 +61,7 @@ def test_type(redis):
 
     assert redis_server(return_value)(redis, 3) == 3
     assert redis_server(return_value)(redis, 'foo') == 'foo'
-
-    # XXX This currently fails since we can't directly return floating
-    #     point numbers from Lua without string conversion and we only
-    #     know to do a string conversion if we do type inference on the
-    #     return value
-    # assert redis_server(return_value)(redis, 2.71828) == 2.71828
+    assert redis_server(return_value)(redis, 2.71828) == 2.71828
 
 def test_loop(redis):
     @redis_server
