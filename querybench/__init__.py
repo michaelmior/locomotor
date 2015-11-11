@@ -94,12 +94,12 @@ class LuaLine(object):
         return TAB * self.indent + self.code + '\n'
 
 class RedisFunc(object):
-    def __init__(self, func, redis_objs=None, helper=False):
-        self.taint = sully.TaintAnalysis(func)
+    def __init__(self, taint, redis_objs=None, helper=False):
+        self.taint = taint
         if redis_objs:
             self.redis_objs = redis_objs
         else:
-            self.redis_objs = identify_redis_objs(func)
+            self.redis_objs = identify_redis_objs(taint.func)
 
         # Get argument names
         body_ast = self.taint.func_ast.body[0]
@@ -498,7 +498,8 @@ class RedisFunc(object):
             #     we're translating do not access any attributes of
             #     the instance
             method = getattr(method_self, method_name[1])
-            wrapped = RedisFunc(method, helper=True)
+            taint = sully.TaintAnalysis(method)
+            wrapped = RedisFunc(taint, helper=True)
 
             # Add any newly discovered expressions which are required
             for in_expr in wrapped.in_exprs:
@@ -609,7 +610,8 @@ class RedisFunc(object):
 # Create a function decorator which converts a function to run on the server
 def redis_server(method=None, redis_objs=None):
     def decorator(method):
-        return functools.update_wrapper(RedisFunc(method, redis_objs), method)
+        taint = sully.TaintAnalysis(method)
+        return functools.update_wrapper(RedisFunc(taint, redis_objs), method)
 
     return decorator(method) if method else decorator
 
