@@ -93,6 +93,32 @@ class LuaLine(object):
     def __str__(self):
         return TAB * self.indent + self.code + '\n'
 
+class ScriptRegistry(object):
+    SCRIPTS = {}
+
+    # Register the script and return its ID
+    @classmethod
+    def register_script(cls, client, lua_code):
+        script = client.register_script(lua_code)
+        cls.SCRIPTS[(client, script.sha)] = script
+        return script.sha
+
+    # Execute a pre-registered script
+    @classmethod
+    def run_script(cls, client, script_id, args):
+        # Dump the necessary arguments with msgpack
+        for i in range(len(args)):
+            if isinstance(args[i], PACKED_TYPES):
+                args[i] = msgpack.dumps(args[i])
+
+        # Get the registered script
+        script = cls.SCRIPTS[(client, script_id)]
+        retval = script(args=args)
+        if retval is None:
+            return None
+        else:
+            return msgpack.loads(retval)
+
 class RedisFuncFragment(object):
     def __init__(self, taint, minlineno=None, maxlineno=None,
                  redis_objs=None, helper=False):
@@ -141,8 +167,8 @@ class RedisFuncFragment(object):
             block = self.process_node(node, 1 if helper else 0)
             self.body.extend(block)
 
-        # Initialize the script to None, we'll register it Later
-        self.script = None
+        # Initialize the script ID to None, we'll register it Later
+        self.script_id = None
 
     # Rename all expressions in a list to their appropriate names
     def rename_expressions(self, expressions):
@@ -545,8 +571,8 @@ class RedisFuncFragment(object):
         return helper_unpacking + arg_unpacking + helper_functions
 
 
-    # Register the script with the backend
-    def register_script(self, client, args, method_self=None):
+    # Produce the lua code for this script fragment
+    def lua_code(self, client, args, method_self=None):
         body = str(self.body)
 
         # XXX This is dumb but lets us avoid most of the pipelining
@@ -555,10 +581,7 @@ class RedisFuncFragment(object):
                                        else UNPIPELINED_CODE
 
         arg_unpacking = self.unpack_args(args, 0, self.helpers, method_self)
-        code = pipeline_code + arg_unpacking + body
-        print(code)
-
-        self.script = client.register_script(code)
+        return pipeline_code + arg_unpacking + body
 
     def __get__(self, instance, owner):
         # We need a descriptor here to get the class instance then we
@@ -580,26 +603,18 @@ class RedisFuncFragment(object):
             client = args[0]
             args = list(args[1:])
 
-        # Register the script if necessary
-        # We need to pass the arguments so we can do type conversions
-        if self.script is None:
-            self.register_script(client, args, method_self)
+        # Register this script if needed
+        if self.script_id is None:
+            lua_code = self.lua_code(client, args, method_self)
+            self.script_id = ScriptRegistry.register_script(client, lua_code)
 
         # Add arguments which are pulled from the class instance
         args += [getattr(method_self, attr[len(SELF_ARG):]) \
                 for attr in self.in_exprs \
                 if attr.startswith(SELF_ARG)]
 
-        # Dump the necessary arguments with msgpack
-        for i in range(len(args)):
-            if isinstance(args[i], PACKED_TYPES):
-                args[i] = msgpack.dumps(args[i])
-
-        retval = self.script(args=args)
-        if retval is None:
-            return None
-        else:
-            return msgpack.loads(retval)
+        # Execute the script
+        return ScriptRegistry.run_script(client, self.script_id, args)
 
 # Create a function decorator which converts a function to run on the server
 def redis_server(method=None, redis_objs=None):
