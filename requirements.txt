@@ -1,6 +1,8 @@
+byteplay==0.2
 msgpack-python==0.4.6
 psycopg2==2.6.1
 pymongo==3.0.3
+pyparsing==1.5.7
 redis==2.10.3
--e git+https://github.com/michaelmior/sully.git@19697201b6d4bfb5caf8d38aa9a528c0eb4d7fce#egg=sully-master
+-e git+https://github.com/michaelmior/sully.git@c49dc727b40d22f11305433bfd988f425feca248#egg=sully-master
 wheel==0.24.0
