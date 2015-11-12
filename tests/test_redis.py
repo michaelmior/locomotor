@@ -28,8 +28,7 @@ def test_get_by_category(redis):
     redis.hmset('item:1', { 'name': 'Foo', 'category': 'Bar' })
     redis.lpush('category:Bar', 'item:1')
 
-    assert get_by_category(redis, 'Bar') == \
-            redis_server(get_by_category)(redis, 'Bar')
+    assert get_by_category(redis, 'Bar') == ['Foo']
 
 def test_add_link(redis):
     @redis_server
