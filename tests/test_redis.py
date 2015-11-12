@@ -293,3 +293,16 @@ def test_and(redis):
         return True and False
 
     assert not bool_and(redis)
+
+def test_partial(redis, capfd):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())], minlineno=3, maxlineno=3)
+    def partial(client):
+        print('LOCAL')
+        return client.get('foo')
+
+    redis.set('foo', 'bar')
+
+    assert partial(redis) == 'bar'
+
+    out, _ = capfd.readouterr()
+    assert out == 'LOCAL\n'

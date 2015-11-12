@@ -174,6 +174,12 @@ class RedisFuncFragment(object):
         # Generate the code for the body of the method
         self.body = LuaBlock()
         for node in self.taint.func_ast.body[0].body:
+            # Ignore lines we don't want to translate
+            if node.lineno < self.minlineno:
+                continue
+            if node.lineno > self.maxlineno:
+                break
+
             block = self.process_node(node, 1 if helper else 0)
             self.body.extend(block)
 
@@ -647,14 +653,20 @@ class RedisFuncFragment(object):
             code = byteplay.Code.from_code(self.taint.func.func_code)
 
             # Find the start and line lines where we need to patch in
+            firstline = code.code[0][1] - 2
             startline = endline = None
             for i, instr in enumerate(code.code):
                 if startline is None and instr[0] == byteplay.SetLineno and \
-                        instr[1] >= self.minlineno:
+                        (instr[1] - firstline) >= self.minlineno:
                     startline = i + 1
                 if instr[0] == byteplay.SetLineno and \
-                        instr[1] <= self.maxlineno:
+                        (instr[1] - firstline) <= self.maxlineno:
                     endline = i - 1
+
+                # If we haven't found the end, keep advancing
+                if instr[0] == byteplay.SetLineno and \
+                        (instr[1] - firstline) <= self.maxlineno:
+                    endline = i
 
             # Patch this into the original function
             # We skip the first line since this is an unwanted SetLineno
@@ -667,10 +679,12 @@ class RedisFuncFragment(object):
         return self.taint.func(*orig_args)
 
 # Create a function decorator which converts a function to run on the server
-def redis_server(method=None, redis_objs=None):
+def redis_server(method=None, redis_objs=None, minlineno=None, maxlineno=None):
     def decorator(method):
         taint = sully.TaintAnalysis(method)
-        fragment = RedisFuncFragment(taint, redis_objs=redis_objs)
+        fragment = RedisFuncFragment(taint, redis_objs=redis_objs,
+                                            minlineno=minlineno,
+                                            maxlineno=maxlineno)
         return functools.update_wrapper(fragment, method)
 
     return decorator(method) if method else decorator
