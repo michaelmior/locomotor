@@ -155,6 +155,8 @@ class RedisFuncFragment(object):
             maxlineno = body_ast.maxlineno
         self.in_exprs, self.out_exprs = sully.block_inout(self.taint.func_ast,
                                                           minlineno, maxlineno)
+        self.minlineno = minlineno
+        self.maxlineno = maxlineno
 
         # Rename the expressions to change things like
         # (self, foo) to SELF__foo
@@ -643,10 +645,20 @@ class RedisFuncFragment(object):
 
             # Copy the line number so the first line matches
             code = byteplay.Code.from_code(self.taint.func.func_code)
-            new_code.code[0] = code.code[0]
+
+            # Find the start and line lines where we need to patch in
+            startline = endline = None
+            for i, instr in enumerate(code.code):
+                if startline is None and instr[0] == byteplay.SetLineno and \
+                        instr[1] >= self.minlineno:
+                    startline = i + 1
+                if instr[0] == byteplay.SetLineno and \
+                        instr[1] <= self.maxlineno:
+                    endline = i - 1
 
             # Patch this into the original function
-            code.code = new_code.code
+            # We skip the first line since this is an unwanted SetLineno
+            code.code[startline:endline] = new_code.code[1:]
             self.taint.func.func_code = code.to_code()
 
             # Make the ScriptRegistry global available
