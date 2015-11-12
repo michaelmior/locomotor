@@ -14,7 +14,13 @@ TAB = '  '
 SELF_ARG = 'SELF__'
 PACKED_TYPES = (list, dict)
 LUA_HEADER = """
-local __RETVAL = {__return=false, __value=nil}
+local __RETVAL = function(value, retval)
+  local __RESULT = {}
+  __RESULT["__value"] = value
+  __RESULT["__return"] = retval
+
+  return cmsgpack.pack(__RESULT)
+end
 """
 PIPELINED_CODE = """
 local __PIPELINE_RESULTS = {}
@@ -264,9 +270,8 @@ class RedisFuncFragment(object):
             if self.helper:
                 line = 'return %s' % retval
             else:
-                line = '__RETVAL["__return"] = true; '\
-                       '__RETVAL["__value"] = %s; ' % retval + \
-                       'return cmsgpack.pack(__RETVAL)'
+                line = 'return __RETVAL(%s, true)' % retval
+
             code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Name):
             # Replace common constants (assuming they are not redefined)
