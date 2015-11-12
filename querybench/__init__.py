@@ -1,6 +1,9 @@
 import ast
+import byteplay
 import collections
+import copy
 import functools
+import hashlib
 import inspect
 import itertools
 import msgpack
@@ -100,8 +103,9 @@ class ScriptRegistry(object):
     @classmethod
     def register_script(cls, client, lua_code):
         script = client.register_script(lua_code)
-        cls.SCRIPTS[(client, script.sha)] = script
-        return script.sha
+        script_id = hashlib.md5(lua_code).hexdigest()
+        cls.SCRIPTS[(client, script_id)] = script
+        return script_id
 
     # Execute a pre-registered script
     @classmethod
@@ -127,6 +131,10 @@ class RedisFuncFragment(object):
             self.redis_objs = redis_objs
         else:
             self.redis_objs = identify_redis_objs(taint.func)
+
+        # Fail if we don't have a valid Redis object
+        if len(self.redis_objs) == 0 and not helper:
+            raise Exception()
 
         # Get argument names
         body_ast = self.taint.func_ast.body[0]
@@ -593,6 +601,9 @@ class RedisFuncFragment(object):
         return inner
 
     def __call__(self, *args):
+        # Save the original arguments so we can use them when calling later
+        orig_args = copy.copy(args)
+
         # Check if this is a method and pull the correct arguments
         if self.method:
             method_self = args[0]
@@ -608,13 +619,40 @@ class RedisFuncFragment(object):
             lua_code = self.lua_code(client, args, method_self)
             self.script_id = ScriptRegistry.register_script(client, lua_code)
 
-        # Add arguments which are pulled from the class instance
-        args += [getattr(method_self, attr[len(SELF_ARG):]) \
-                for attr in self.in_exprs \
-                if attr.startswith(SELF_ARG)]
+            # Get all the arguments to go to the function
+            arg_exprs = copy.copy(self.arg_names)
+            for attr in self.in_exprs:
+                if attr.startswith(SELF_ARG):
+                    arg_exprs.append('self.%s' % attr[len(SELF_ARG):])
 
-        # Execute the script
-        return ScriptRegistry.run_script(client, self.script_id, args)
+            # XXX For now, there can be only one
+            client_arg = self.redis_objs[0].id
+
+            # Compile code to call our script
+            script_call = 'ScriptRegistry.run_script(%s, "%s", [%s])' \
+                    % (client_arg, self.script_id, ', '.join(arg_exprs))
+            script_call = compile(script_call, '<string>', 'eval')
+
+            # Replace LOAD_NAME with LOAD_FAST for all function argument
+            new_code = byteplay.Code.from_code(script_call)
+            for i, instr in enumerate(new_code.code):
+                if instr[0] == byteplay.LOAD_NAME and \
+                        instr[1] in self.taint.func.func_code.co_varnames:
+                    new_code.code[i] = (byteplay.LOAD_FAST, instr[1])
+
+
+            # Copy the line number so the first line matches
+            code = byteplay.Code.from_code(self.taint.func.func_code)
+            new_code.code[0] = code.code[0]
+
+            # Patch this into the original function
+            code.code = new_code.code
+            self.taint.func.func_code = code.to_code()
+
+            # Make the ScriptRegistry global available
+            self.taint.func.func_globals['ScriptRegistry'] = ScriptRegistry
+
+        return self.taint.func(*orig_args)
 
 # Create a function decorator which converts a function to run on the server
 def redis_server(method=None, redis_objs=None):

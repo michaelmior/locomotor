@@ -59,12 +59,15 @@ def test_type(redis):
     def return_value(client, value):
         return value
 
-    assert redis_server(return_value)(redis, 3) == 3
-    assert redis_server(return_value)(redis, 'foo') == 'foo'
-    assert redis_server(return_value)(redis, 2.71828) == 2.71828
+    redis_objs=[ast.Name(id='client', ctx=ast.Load())]
+    assert redis_server(return_value, redis_objs=redis_objs)(redis, 3) == 3
+    assert redis_server(return_value, redis_objs=redis_objs)(redis, 'foo') \
+            == 'foo'
+    assert redis_server(return_value, redis_objs=redis_objs)(redis, 2.71828) \
+            == 2.71828
 
 def test_loop(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def loop(client):
         items = []
         for i in range(10):
@@ -74,7 +77,7 @@ def test_loop(redis):
     assert loop(redis) == range(10)
 
 def test_nil(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def nil(client):
         return None
 
@@ -102,21 +105,21 @@ def test_shard(redis):
         def shard(self, w_id) :
             return int(w_id) % self.db_count
 
-        @redis_server
+        @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
         def get(self, client):
             return self.shard('10')
 
     assert Foo().get(redis) == 1
 
 def test_array(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def foo(client, array):
         return array[0]
 
     assert foo(redis, [3, 2, 1]) == 3
 
 def test_dict(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def foo(client, d, k):
         return d[k]
 
@@ -137,7 +140,7 @@ def test_execute(redis):
     assert pipe(redis, 'pipe_foo', 'pipe_bar') == 'bazquux'
 
 def test_insert(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def insert(client):
         x = []
         x.insert(0, 1)
@@ -148,7 +151,7 @@ def test_insert(redis):
 def test_constant(redis):
     FOO = 3
 
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def constant(client):
         return FOO
 
@@ -158,7 +161,7 @@ def test_class_constant(redis):
     class constants:
         FOO = 3
 
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def constant(client):
         return constants.FOO
 
@@ -168,35 +171,35 @@ def test_nested_func(redis):
     class constants:
         STRING = 'foo'
 
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def replace(client):
         return constants.STRING.replace('foo', 'bar')
 
     assert replace(redis) == 'bar'
 
 def test_string_replace(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def replace(client, string):
         return string.replace('foo', 'bar')
 
     assert replace(redis, 'foo') == 'bar'
 
 def test_string_join(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def join(client, arr):
         return ', '.join(arr)
 
     assert join(redis, ['a', 'b', 'c']) == 'a, b, c'
 
 def test_newline(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def newline(client):
         return '\n'
 
     assert newline(redis) == '\n'
 
 def test_usub(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def usub(client, val):
         return -val
 
@@ -258,35 +261,35 @@ def test_tpcc_fragment(redis):
     assert RedisDriver().doDelivery(redis) == None
 
 def test_multiply(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def multiply(client, m, n):
         return m * n
 
     assert multiply(redis, 3, 4) == 12
 
 def test_divide(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def divide(client, m, n):
         return m / n
 
     assert divide(redis, 12, 4) == 3
 
 def test_power(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def power(client, m, n):
         return m ** n
 
     assert power(redis, 3, 3) == 27
 
 def test_or(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def bool_or(client):
         return True or False
 
     assert bool_or(redis)
 
 def test_and(redis):
-    @redis_server
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def bool_and(client):
         return True and False
 
