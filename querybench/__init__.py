@@ -13,6 +13,9 @@ import types
 TAB = '  '
 SELF_ARG = 'SELF__'
 PACKED_TYPES = (list, dict)
+LUA_HEADER = """
+local __RETVAL = {__return=false, __value=nil}
+"""
 PIPELINED_CODE = """
 local __PIPELINE_RESULTS = {}
 
@@ -117,11 +120,19 @@ class ScriptRegistry(object):
 
         # Get the registered script
         script = cls.SCRIPTS[(client, script_id)]
+
+        # Execute the script and unpack the return value
         retval = script(args=args)
         if retval is None:
-            return None
+            retval = {'__return': True}
         else:
-            return msgpack.loads(retval)
+            retval = msgpack.loads(retval)
+
+        # Specify an empty value if none is given
+        if '__value' not in retval:
+            retval['__value'] = None
+
+        return retval
 
 class RedisFuncFragment(object):
     def __init__(self, taint, minlineno=None, maxlineno=None,
@@ -253,7 +264,9 @@ class RedisFuncFragment(object):
             if self.helper:
                 line = 'return %s' % retval
             else:
-                line = 'return cmsgpack.pack(%s)' % retval
+                line = '__RETVAL["__return"] = true; '\
+                       '__RETVAL["__value"] = %s; ' % retval + \
+                       'return cmsgpack.pack(__RETVAL)'
             code.append(LuaLine(line, node, indent))
         elif isinstance(node, ast.Name):
             # Replace common constants (assuming they are not redefined)
@@ -384,9 +397,9 @@ class RedisFuncFragment(object):
             #     anonymous function to avoid accidentally capturing the second
             #     value produced by gsub when this expression is used later
             elif node.func.attr == 'replace':
-                line = '((function() local __RETVAL, _; ' \
-                       '__RETVAL, _ = string.gsub(%s, %s); ' \
-                       'return __RETVAL end)())' \
+                line = '((function() local __TEMP, _; ' \
+                       '__TEMP, _ = string.gsub(%s, %s); ' \
+                       'return __TEMP end)())' \
                         % (self.process_node(node.func.value).code, args)
 
             # Join a table of strings
@@ -597,7 +610,7 @@ class RedisFuncFragment(object):
                                        else UNPIPELINED_CODE
 
         arg_unpacking = self.unpack_args(args, 0, self.helpers, method_self)
-        return pipeline_code + arg_unpacking + body
+        return LUA_HEADER + pipeline_code + arg_unpacking + body
 
     def __get__(self, instance, owner):
         # We need a descriptor here to get the class instance then we
@@ -637,17 +650,50 @@ class RedisFuncFragment(object):
             client_arg = self.redis_objs[0].id
 
             # Compile code to call our script
-            script_call = 'ScriptRegistry.run_script(%s, "%s", [%s])' \
+            # We first store the return value of the script in a temporary
+            # variable and then check if we're supposed to return
+            # __RETURN_HERE__ is a placeholder that we can insert the return
+            # instruction as "return" is not valid in the current context
+            script_call = '__RETVAL = ScriptRegistry.run_script' \
+                          '(%s, "%s", [%s])\n' \
                     % (client_arg, self.script_id, ', '.join(arg_exprs))
-            script_call = compile(script_call, '<string>', 'eval')
+            script_call += 'if __RETVAL["__return"]:\n' \
+                           '    __RETVAL["__value"]\n' \
+                           '    __RETURN_HERE__\n' \
+                           'for __var, __value in __RETVAL.iteritems():\n' \
+                           '    if not __var.startswith("__"):\n' \
+                           '        locals()[__var] == __value'
+
+            script_call = compile(script_call, '<string>', 'exec')
 
             # Replace LOAD_NAME with LOAD_FAST for all function argument
+            # And store where we need to splice in the return instruction
             new_code = byteplay.Code.from_code(script_call)
+            linenos = []
             for i, instr in enumerate(new_code.code):
                 if instr[0] == byteplay.LOAD_NAME and \
                         instr[1] in self.taint.func.func_code.co_varnames:
                     new_code.code[i] = (byteplay.LOAD_FAST, instr[1])
 
+                # Find where our return instruction should go
+                if instr[0] == byteplay.LOAD_NAME \
+                        and instr[1] == '__RETURN_HERE__':
+                    return_loc = i - len(linenos)
+
+                # Track where line numbers appear so we can remove them
+                # to retain the line numbers from the original function
+                if instr[0] == byteplay.SetLineno:
+                    linenos.append(i)
+
+            # Remove all line number markers
+            removed_lines = 0
+            for lineno in linenos:
+                del new_code.code[lineno - removed_lines]
+                removed_lines += 1
+
+            # Patch in the return instruction
+            new_code.code[return_loc-1:return_loc+2] = \
+                    [(byteplay.RETURN_VALUE, None)]
 
             # Copy the line number so the first line matches
             code = byteplay.Code.from_code(self.taint.func.func_code)
@@ -670,7 +716,7 @@ class RedisFuncFragment(object):
 
             # Patch this into the original function
             # We skip the first line since this is an unwanted SetLineno
-            code.code[startline:endline] = new_code.code[1:]
+            code.code[startline:endline] = new_code.code
             self.taint.func.func_code = code.to_code()
 
             # Make the ScriptRegistry global available
