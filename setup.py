@@ -14,13 +14,12 @@ class PyTest(Command):
 
 
 setup(
-    name='querybench',
-    packages=['querybench'],
+    name='locomotor',
+    packages=['locomotor'],
     version='0.0.1',
     description='Some Redis benchmarking experiments',
     author='Michael Mior',
     author_email='michael.mior@gmail.com',
-    url='https://github.com/michaelmior/querybench',
 
     cmdclass={'test': PyTest},
 
@@ -30,6 +29,5 @@ setup(
         'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
-        'Topic :: Software Development :: Libraries',
     ],
 )
