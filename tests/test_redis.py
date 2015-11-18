@@ -2,7 +2,7 @@ import ast
 import imp
 import pytest
 
-from querybench import redis_server
+from locomotor import redis_server
 
 @pytest.fixture(scope='session')
 def redis(request):

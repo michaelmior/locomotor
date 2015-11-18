@@ -4,7 +4,7 @@ import pytest
 import sully
 import sys
 
-from querybench import identify_redis_objs, identify_redis_funcs
+from locomotor import identify_redis_objs, identify_redis_funcs
 
 sys.path.insert(0, 'vendor/pytpcc')
 sys.path.insert(0, 'vendor/pytpcc/pytpcc')
