@@ -306,3 +306,11 @@ def test_partial(redis, capfd):
 
     out, _ = capfd.readouterr()
     assert out == 'LOCAL\n'
+
+def test_pass(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def pass_func(client):
+        pass
+        return 3
+
+    assert pass_func(redis) == 3

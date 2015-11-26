@@ -524,6 +524,9 @@ class RedisFuncFragment(object):
                 value = self.process_node(value)
                 line = 'redis.log(redis.LOG_DEBUG, %s)' % value
                 code.append(LuaLine(line, node, indent))
+        elif isinstance(node, ast.Pass):
+            line = 'do end'
+            code.append(LuaLine(line, node, indent))
         else:
             # XXX This type of node is not handled
             print(ast.dump(node))
