@@ -379,7 +379,7 @@ class RedisFuncFragment(object):
 
             # Handle some built-in functions
             if isinstance(node.func, ast.Name):
-                if node.func.id == 'int':
+                if node.func.id in ('int', 'float'):
                     line = 'tonumber(%s)' % args
                 elif node.func.id == 'str':
                     line = 'tostring(%s)' % args
@@ -393,6 +393,7 @@ class RedisFuncFragment(object):
                     line = args
                 else:
                     # XXX We don't know how to handle this function
+                    print(ast.dump(node.func))
                     raise Exception()
 
             # XXX We assume now that the function being called is an Attribute
