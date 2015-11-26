@@ -333,3 +333,10 @@ def test_augassign(redis):
         return x
 
     assert augassign(redis) == 3
+
+def test_tuple(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def tuple(client):
+        return (2, 3)
+
+    assert tuple(redis) == [2, 3]

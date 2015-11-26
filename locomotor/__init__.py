@@ -259,7 +259,7 @@ class RedisFuncFragment(object):
             for var in node.targets:
                 line = 'local %s = %s;' % (var.id, value)
                 code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.List):
+        elif isinstance(node, (ast.List, ast.Tuple)):
             line = '{' + \
                 ', '.join(self.process_node(n).code for n in node.elts) + '}'
             code.append(LuaLine(line, node, indent))
