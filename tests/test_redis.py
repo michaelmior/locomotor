@@ -324,3 +324,12 @@ def test_compare(redis):
             return 2 >= 5
 
     assert compare(redis) == True
+
+def test_augassign(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def augassign(client):
+        x = 1
+        x += 2
+        return x
+
+    assert augassign(redis) == 3

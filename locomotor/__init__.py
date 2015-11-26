@@ -535,6 +535,18 @@ class RedisFuncFragment(object):
         elif isinstance(node, ast.Pass):
             line = 'do end'
             code.append(LuaLine(line, node, indent))
+        elif isinstance(node, ast.AugAssign):
+            target = self.process_node(node.target).code
+            value = self.process_node(node.value).code
+
+            if isinstance(node.op, ast.Add):
+                line = '%s = %s + %s' % (target, target, value)
+            else:
+                # XXX Some unhandled operator
+                print(node.op)
+                raise Exception()
+
+            code.append(LuaLine(line, node, indent))
         else:
             # XXX This type of node is not handled
             print(ast.dump(node))
