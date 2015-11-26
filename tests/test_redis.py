@@ -340,3 +340,14 @@ def test_tuple(redis):
         return (2, 3)
 
     assert tuple(redis) == [2, 3]
+
+def test_continue(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def cont(client):
+        for i in range(10):
+            continue
+            return False
+
+        return True
+
+    assert cont(redis) == True

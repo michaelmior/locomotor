@@ -309,9 +309,26 @@ class RedisFuncFragment(object):
                         (node.target.id, for_list)
 
             code.append(LuaLine(line, node, indent))
+
+            # Add a nested loop with only one iteration
+            # which will allow us to break out when needed
+            code.append(LuaLine('repeat', node, indent + 1))
+
+            # Add all statements in the body
             for n in node.body:
-                code.append(self.process_node(n, indent + 1))
+                code.append(self.process_node(n, indent + 2))
+
+            # End the nested loop from above
+            code.append(LuaLine('until true', node, indent + 1))
+
             code.append(LuaLine('end', [], indent))
+        elif isinstance(node, ast.Continue):
+            # We use the hack below of nested loops to implement continue,
+            # so we just break out of that inner loop here
+            # http://stackoverflow.com/a/25781200/123695
+            # We have to embed this in a dummy conditional since for syntactic
+            # reasons, break must always be the last statement in a block
+            code.append(LuaLine('if true then break end', [], indent))
         elif isinstance(node, ast.BoolOp):
             values = ['(' + self.process_node(n).code + ')'
                       for n in node.values]
