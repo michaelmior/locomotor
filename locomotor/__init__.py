@@ -481,6 +481,14 @@ class RedisFuncFragment(object):
                 op = ' == '
             elif isinstance(node.ops[0], ast.NotEq):
                 op = ' != '
+            elif isinstance(node.ops[0], ast.Gt):
+                op = ' > '
+            elif isinstance(node.ops[0], ast.GtE):
+                op = ' >= '
+            elif isinstance(node.ops[0], ast.Lt):
+                op = ' < '
+            elif isinstance(node.ops[0], ast.LtE):
+                op = ' <= '
             else:
                 # XXX We don't handle this type of comparison
                 print(node.ops[0])

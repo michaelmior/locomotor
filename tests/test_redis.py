@@ -314,3 +314,13 @@ def test_pass(redis):
         return 3
 
     assert pass_func(redis) == 3
+
+def test_compare(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def compare(client):
+        if 3 < 4:
+            return 2 > 1
+        else:
+            return 2 >= 5
+
+    assert compare(redis) == True
