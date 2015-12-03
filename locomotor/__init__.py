@@ -498,7 +498,7 @@ class RedisFuncFragment(object):
             if isinstance(node.ops[0], ast.Eq):
                 op = ' == '
             elif isinstance(node.ops[0], ast.NotEq):
-                op = ' != '
+                op = ' ~= '
             elif isinstance(node.ops[0], ast.Gt):
                 op = ' > '
             elif isinstance(node.ops[0], ast.GtE):

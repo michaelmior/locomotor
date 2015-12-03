@@ -321,7 +321,7 @@ def test_compare(redis):
         if 3 < 4:
             return 2 > 1
         else:
-            return 2 >= 5
+            return 2 >= 5 and 2 != 3
 
     assert compare(redis) == True
 
