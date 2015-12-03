@@ -351,3 +351,11 @@ def test_continue(redis):
         return True
 
     assert cont(redis) == True
+
+def test_pipe(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def pipe(client):
+        return 1337
+
+    redis = redis.pipeline()
+    assert pipe(redis) == 1337

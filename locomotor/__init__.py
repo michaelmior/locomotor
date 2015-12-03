@@ -7,6 +7,7 @@ import hashlib
 import inspect
 import itertools
 import msgpack
+import redis
 import sully
 import types
 
@@ -127,8 +128,20 @@ class ScriptRegistry(object):
         # Get the registered script
         script = cls.SCRIPTS[(client, script_id)]
 
+        # Ensure the script is loaded for pipelining
+        # XXX This makes assumptions on the client library
+        if isinstance(client, redis.client.BasePipeline):
+            cmd_exec = client.immediate_execute_command
+        else:
+            cmd_exec = client.execute_command
+
+        if not script.sha:
+            script.sha = cmd_exec('SCRIPT', 'LOAD', script.script,
+                                  **{'parse': 'LOAD'})
+
         # Execute the script and unpack the return value
-        retval = script(args=args)
+        retval = cmd_exec('EVALSHA', script.sha, 0, *args)
+
         if retval is None:
             retval = {'__return': True}
         else:
