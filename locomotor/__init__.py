@@ -71,7 +71,10 @@ class LuaBlock(object):
         if lines is None:
             lines = []
 
-        self.lines = lines
+        self.lines = []
+        self.names = set()
+        for line in lines:
+            self.append(line)
 
     @property
     def code(self):
@@ -79,10 +82,14 @@ class LuaBlock(object):
 
     def append(self, line):
         self.lines.append(line)
+        self.names.update(line.names)
+        line.names = set()
 
     def extend(self, block):
         for line in block.lines:
             self.append(line)
+
+        self.names.update(block.names)
 
     def __getitem__(self, *args):
         return self.lines.__getitem__(*args)
@@ -93,15 +100,29 @@ class LuaBlock(object):
     def __iter__(self):
         return iter(self.lines)
 
+    def __repr__(self):
+        return '(' + repr(list(self.names)) + ', ' + \
+               '[' + ''.join(repr(line) for line in self.lines) + ']' + ')'
+
     def __str__(self):
-        return ''.join(str(line) for line in self.lines)
+        if len(self.names) > 0:
+            code = '\n'.join('local %s;' % name for name in self.names) + '\n'
+        else:
+            code = ''
+
+        code += ''.join(str(line) for line in self.lines)
+        return code
 
 # A line of Lua code which knows the line numbers of the corresponding Python
 class LuaLine(object):
-    def __init__(self, code, node=None, indent=0):
+    def __init__(self, code, node=None, indent=0, names=set()):
         self.code = code
         self.node = node
         self.indent = indent
+        self.names = names
+
+    def __repr__(self):
+        return repr(str(self))
 
     def __str__(self):
         return TAB * self.indent + self.code + '\n'
@@ -270,8 +291,9 @@ class RedisFuncFragment(object):
             value = self.process_node(node.value, indent).code
 
             for var in node.targets:
-                line = 'local %s = %s;' % (var.id, value)
-                code.append(LuaLine(line, node, indent))
+                names = set([var.id])
+                line = '%s = %s;' % (var.id, value)
+                code.append(LuaLine(line, node, indent, names))
         elif isinstance(node, (ast.List, ast.Tuple)):
             line = '{' + \
                 ', '.join(self.process_node(n).code for n in node.elts) + '}'

@@ -359,3 +359,23 @@ def test_pipe(redis):
 
     redis = redis.pipeline()
     assert pipe(redis) == 1337
+
+def test_reassign(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def reassign(client):
+        x = 3
+        x = 4
+        return x
+
+    assert reassign(redis) == 4
+
+def test_local_scope(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def local_scope(client):
+        if True:
+            x = 3
+        else:
+            x = 4
+        return x
+
+    assert local_scope(redis) == 3
