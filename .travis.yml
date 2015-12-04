@@ -1,6 +1,9 @@
 language: python
 python:
   - "2.7"
-services:
-  - redis
+sudo: true
+before_install:
+  - git clone https://github.com/antirez/redis vendor/redis
+  - (cd vendor/redis; git checkout testing && make && sudo make install)
+  - echo -e '\n\n\n\n\n\n' | sudo ./vendor/redis/utils/install_server.sh
 script: "python setup.py test"
