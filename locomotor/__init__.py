@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import itertools
 import msgpack
+import os
 import redis
 import sully
 import time
@@ -16,34 +17,8 @@ import types
 TAB = '  '
 SELF_ARG = 'SELF__'
 PACKED_TYPES = (list, dict)
-LUA_HEADER = """
-redis.replicate_commands()
-local __RETVAL = function(value, retval)
-  local __RESULT = {}
-  __RESULT["__value"] = value
-  __RESULT["__return"] = retval
-
-  return cmsgpack.pack(__RESULT)
-end
-"""
-PIPELINED_CODE = """
-local __PIPELINE_RESULTS = {}
-
-local __PIPE_ADD = function(key, value)
-  if __PIPELINE_RESULTS[key] == nil then
-    __PIPELINE_RESULTS[key] = {}
-  end
-
-  table.insert(__PIPELINE_RESULTS[key], value)
-  return value
-end
-
-local __PIPE_GET = function(key)
-  local RETVAL = __PIPELINE_RESULTS[key]
-  __PIPELINE_RESULTS[key] = {}
-  return RETVAL
-end
-"""
+LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
+PIPELINED_CODE = open(os.path.dirname(__file__) + '/lua/pipelined.lua').read()
 UNPIPELINED_CODE = """
 local __PIPE_ADD = function(key, value) return value end
 """
