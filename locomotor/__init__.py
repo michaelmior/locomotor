@@ -492,7 +492,10 @@ class RedisFuncFragment(object):
             elif any(sully.nodes_equal(node.func.value, obj)
                     for obj in self.redis_objs):
                 # Generate the Redis function call expression
-                call = 'redis.call(\'%s\', %s)' % (node.func.attr, args)
+                cmd = node.func.attr
+                if cmd == 'delete':
+                    cmd = 'del'
+                call = 'redis.call(\'%s\', %s)' % (cmd, args)
 
                 # Wrap the Redis call in a function which stores the
                 # result if needed later for pipelining and returns it

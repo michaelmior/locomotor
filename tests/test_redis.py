@@ -379,3 +379,12 @@ def test_local_scope(redis):
         return x
 
     assert local_scope(redis) == 3
+
+def test_delete(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def delete(client):
+        client.delete('foo')
+
+    redis.set('foo', 'bar')
+    delete(redis)
+    assert redis.get('foo') == None
