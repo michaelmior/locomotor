@@ -17,6 +17,7 @@ TAB = '  '
 SELF_ARG = 'SELF__'
 PACKED_TYPES = (list, dict)
 LUA_HEADER = """
+redis.replicate_commands()
 local __RETVAL = function(value, retval)
   local __RESULT = {}
   __RESULT["__value"] = value
