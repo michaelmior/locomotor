@@ -2,6 +2,7 @@ import ast
 import byteplay
 import collections
 import copy
+import datetime
 import functools
 import hashlib
 import inspect
@@ -9,6 +10,7 @@ import itertools
 import msgpack
 import redis
 import sully
+import time
 import types
 
 TAB = '  '
@@ -64,6 +66,15 @@ REDIS_METHODS = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr',
                      'zrevrank', 'zrevscore', 'zunionstore'])
 REDIS_METHOD_COUNT = 2
 REDIS_METHOD_PCT = 0.8
+
+def decode_msgpack(obj):
+    # TODO: Convert datetime objects back
+    return obj
+
+def encode_msgpack(obj):
+    if isinstance(obj, datetime.datetime):
+        return time.mktime(obj.timetuple())
+    return obj
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
@@ -144,7 +155,7 @@ class ScriptRegistry(object):
         # Dump the necessary arguments with msgpack
         for i in range(len(args)):
             if isinstance(args[i], PACKED_TYPES):
-                args[i] = msgpack.dumps(args[i])
+                args[i] = msgpack.packb(args[i], default=encode_msgpack)
 
         # Get the registered script
         script = cls.SCRIPTS[(client, script_id)]
@@ -166,7 +177,7 @@ class ScriptRegistry(object):
         if retval is None:
             retval = {'__return': True}
         else:
-            retval = msgpack.loads(retval)
+            retval = msgpack.unpackb(retval, object_hook=decode_msgpack)
 
         # Specify an empty value if none is given
         if '__value' not in retval:
