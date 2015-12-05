@@ -631,7 +631,8 @@ class RedisFuncFragment(object):
                 conversion = ''
 
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
-                    (self.in_exprs[i + start_arg], conversion ,i + start_arg + 1)
+                    (self.in_exprs[i + start_arg], conversion,
+                     i + start_arg + 1)
 
             # Track if this is a dictionary so we know if we
             # need to add one to indexes into the Lua table
