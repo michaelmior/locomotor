@@ -3,7 +3,7 @@ import itertools
 import sully
 import types
 
-# The constants below are used when trying to identify Redis client objects
+#: Method names used when trying to identify Redis client objects
 REDIS_METHODS = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr',
                      'delete', 'execute', 'exists', 'expire', 'expireat',
                      'get', 'getbit', 'getset', 'hdel', 'hget', 'hgetall',
@@ -21,7 +21,12 @@ REDIS_METHODS = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr',
                      'zrange', 'zrangebyscore', 'zrank', 'zrem',
                      'zremrangebyrank', 'zrevrange', 'zrevrangebyscore',
                      'zrevrank', 'zrevscore', 'zunionstore'])
+
+#: The minimum number of methods which must be identified as Redis
+#: calls to denote an object as corresponding to a Redis client
 REDIS_METHOD_COUNT = 2
+
+#: The percentage of method calls which must match a predefined list
 REDIS_METHOD_PCT = 0.8
 
 # Identify objects likely to be used to access Redis in the code

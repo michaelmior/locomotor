@@ -15,14 +15,25 @@ import time
 
 from .identify import *
 
+#: The string literal to use for tabs in generated Lua code
 TAB = '  '
+
+#: Types which should be serialized via msgpack
 PACKED_TYPES = (list, dict, types.NoneType, datetime.datetime)
+
+#: A header added to all generated Lua code
 LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
+
+#: Additional functions for code which uses pipelining
 PIPELINED_CODE = open(os.path.dirname(__file__) + '/lua/pipelined.lua').read()
-FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
+
+#: A dummy function to use for code which does not involve pipelining
 UNPIPELINED_CODE = """
 local __PIPE_ADD = function(key, value) return value end
 """
+
+#: Function names which we assume are builtins
+FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
 
 def decode_msgpack(obj):
     # TODO: Convert datetime objects back
