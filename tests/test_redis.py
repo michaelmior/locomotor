@@ -135,6 +135,13 @@ def test_dict(redis):
 
     assert foo(redis, {'a': 1, 'b': 2}, 'b') == 2
 
+def test_dict_literal(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def foo(client):
+        return {'a': 1}['a']
+
+    assert foo(redis) == 1
+
 def test_execute(redis):
     @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
     def pipe(client, key1, key2):

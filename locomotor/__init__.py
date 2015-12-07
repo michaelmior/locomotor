@@ -476,6 +476,17 @@ class RedisFuncFragment(object):
         # reasons, break must always be the last statement in a block
         code.append(LuaLine('if true then break end', [], indent))
 
+    # Generate code for a dictionary literal
+    def process_Dict(self, node, code, indent):
+        pairs = ["['__DICT'] = true"]
+        for key, value in itertools.izip(node.keys, node.values):
+            key = self.process_node(key).code
+            value = self.process_node(value).code
+            pairs.append('[%s] = %s' % (key, value))
+
+        line = '({%s})' % ', '.join(pairs)
+        code.append(LuaLine(line, [], indent))
+
     # Generate code for an expression
     def process_Expr(self, node, code, indent):
         code.append(self.process_node(node.value, indent))
