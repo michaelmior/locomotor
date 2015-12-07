@@ -175,7 +175,10 @@ class RedisFuncFragment(object):
         self.method = self.arg_names[0] == 'self'
 
         # Strip the instance and client object parameters
-        self.arg_names = list(self.arg_names[self.method + (not helper):])
+        self.arg_names = list(self.arg_names[self.method:])
+        for obj in self.redis_objs:
+            self.arg_names.remove(obj.id)
+
         self.helpers = self.taint.functions_in_range(None, None)
 
         # Get the expressions we need to bring in and out of this block

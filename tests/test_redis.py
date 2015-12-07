@@ -435,3 +435,11 @@ def test_string_len(redis):
         return len('foo')
 
     assert string_len(redis) == 3
+
+def test_multiple_objs(redis):
+    @redis_server(redis_objs=[ast.Name(id='client1', ctx=ast.Load()), ast.Name(id='client2', ctx=ast.Load())])
+    def multiple_objs(client1, client2, value):
+        client1.set('foo', value)
+        return client2.get('foo')
+
+    assert multiple_objs(redis, redis, 'bar') == 'bar'
