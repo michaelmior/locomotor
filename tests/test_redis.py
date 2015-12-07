@@ -407,3 +407,10 @@ def test_datetime(redis):
 
     # XXX We do not properly round trip datetime objects yet
     assert convert_datetime(redis, datetime.datetime.now()) is not None
+
+def test_unary(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def unary(client):
+        return +3
+
+    assert unary(redis) == 3

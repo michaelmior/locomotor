@@ -623,6 +623,9 @@ class RedisFuncFragment(object):
     def process_UnaryOp(self, node, code, indent):
         if isinstance(node.op, ast.USub):
             op = '-'
+        elif isinstance(node.op, ast.UAdd):
+            # XXX We're assuming that unary addition does nothing
+            op = ''
         else:
             # XXX Some unhandled operator
             print(node.op)
