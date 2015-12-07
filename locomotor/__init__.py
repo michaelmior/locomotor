@@ -253,14 +253,10 @@ class RedisFuncFragment(object):
     def process_node(self, node, indent=0):
         code = []
 
-        # Get the corresponding method name
-        cls = node.__class__.__name__
-        method = '_'.join(x.lower() \
-                for x in re.split('([A-Z][a-z]*)', cls) if x)
-
-        # Call the method or produce an error if it does not exist
+        # Call the corresponding method or produce an error
         try:
-            getattr(self, 'process_' + method)(node, code, indent)
+            cls = node.__class__.__name__
+            getattr(self, 'process_' + cls)(node, code, indent)
         except KeyError:
             # XXX This type of node is not handled
             print(ast.dump(node))
@@ -270,7 +266,7 @@ class RedisFuncFragment(object):
         return LuaBlock(code)
 
     # Generate code for an assignment operation
-    def process_assign(self, node, code, indent):
+    def process_Assign(self, node, code, indent):
         value = self.process_node(node.value, indent).code
 
         for var in node.targets:
@@ -279,7 +275,7 @@ class RedisFuncFragment(object):
             code.append(LuaLine(line, node, indent, names))
 
     # Generate code for an attribute access x.y
-    def process_attribute(self, node, code, indent):
+    def process_Attribute(self, node, code, indent):
         obj = self.process_node(node.value).code
 
         # XXX Assume uppercase values are constants
@@ -296,7 +292,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(expr, node, indent))
 
     # Generate code for agumented assignment (e.g. +=)
-    def process_aug_assign(self, node, code, indent):
+    def process_AugAssign(self, node, code, indent):
         target = self.process_node(node.target).code
         value = self.process_node(node.value).code
 
@@ -310,7 +306,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a binary operator
-    def process_bin_op(self, node, code, indent):
+    def process_BinOp(self, node, code, indent):
         op1 = self.process_node(node.left).code
         op2 = self.process_node(node.right).code
 
@@ -340,7 +336,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a boolean operator
-    def process_bool_op(self, node, code, indent):
+    def process_BoolOp(self, node, code, indent):
         values = ['(' + self.process_node(n).code + ')' for n in node.values]
 
         if isinstance(node.op, ast.Or):
@@ -355,7 +351,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(op.join(values), node, indent))
 
     # Generate code for a function call
-    def process_call(self, node, code, indent):
+    def process_Call(self, node, code, indent):
         # We don't support positional or keyword arguments
         if node.starargs or node.kwargs:
             raise Exception()
@@ -440,7 +436,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a comparison operation
-    def process_compare(self, node, code, indent):
+    def process_Compare(self, node, code, indent):
         # XXX We only handle a single comparison
         if len(node.ops) != 1 or len(node.comparators) != 1:
             raise Exception()
@@ -469,7 +465,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a continue statement
-    def process_continue(self, node, code, indent):
+    def process_Continue(self, node, code, indent):
         # We use the hack below of nested loops to implement continue,
         # so we just break out of that inner loop here
         # http://stackoverflow.com/a/25781200/123695
@@ -478,11 +474,11 @@ class RedisFuncFragment(object):
         code.append(LuaLine('if true then break end', [], indent))
 
     # Generate code for an expression
-    def process_expr(self, node, code, indent):
+    def process_Expr(self, node, code, indent):
         code.append(self.process_node(node.value, indent))
 
     # Generate code for a for loop
-    def process_for(self, node, code, indent):
+    def process_For(self, node, code, indent):
         # Get the list we are looping over
         for_list = self.process_node(node.iter).code
 
@@ -518,7 +514,7 @@ class RedisFuncFragment(object):
         code.append(LuaLine('end', [], indent))
 
     # Generate code for an if statement
-    def process_if(self, node, code, indent):
+    def process_If(self, node, code, indent):
         # Add a line for the initial test
         test = self.process_node(node.test).code
         line = 'if %s then' % test
@@ -538,17 +534,17 @@ class RedisFuncFragment(object):
         code.append(LuaLine('end', [], indent))
 
     # Generate code for an index value
-    def process_index(self, node, code, indent):
-        return self.process_expr(node, code, indent)
+    def process_Index(self, node, code, indent):
+        return self.process_Expr(node, code, indent)
 
     # Generatec code for a list constant
-    def process_list(self, node, code, indent):
+    def process_List(self, node, code, indent):
         line = '{' + \
                ', '.join(self.process_node(n).code for n in node.elts) + '}'
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a simple variable name
-    def process_name(self, node, code, indent):
+    def process_Name(self, node, code, indent):
         # Replace common constants (assuming they are not redefined)
         if node.id == 'None':
             name = 'nil'
@@ -566,17 +562,17 @@ class RedisFuncFragment(object):
         code.append(LuaLine(name, node, indent))
 
     # Generate code for a numberical constant
-    def process_num(self, node, code, indent):
+    def process_Num(self, node, code, indent):
         line = self.convert_value(node.n)
         code.append(LuaLine(line, node, indent))
 
     # Generate code for `pass`
-    def process_pass(self, node, code, indent):
+    def process_Pass(self, node, code, indent):
         line = 'do end'
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a print statement
-    def process_print(self, node, code, indent):
+    def process_Print(self, node, code, indent):
         # XXX This changes behaviour to log to Redis instead
         #     of print on the application side
 
@@ -591,7 +587,7 @@ class RedisFuncFragment(object):
             code.append(LuaLine(line, node, indent))
 
     # Generate code for a return statement
-    def process_return(self, node, code, indent):
+    def process_Return(self, node, code, indent):
         retval = self.process_node(node.value).code
 
         # If this is the final return value, pack it up with cmsgpack
@@ -603,12 +599,12 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a string constant
-    def process_str(self, node, code, indent):
+    def process_Str(self, node, code, indent):
         line = self.convert_value(node.s)
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a subscript []
-    def process_subscript(self, node, code, indent):
+    def process_Subscript(self, node, code, indent):
         subs = self.process_node(node.slice).code
         expr = self.process_node(node.value).code
 
@@ -620,11 +616,11 @@ class RedisFuncFragment(object):
         code.append(LuaLine(line, node, indent))
 
     # Generate code for a tuple constant
-    def process_tuple(self, node, code, indent):
-        return self.process_list(node, code, indent)
+    def process_Tuple(self, node, code, indent):
+        return self.process_List(node, code, indent)
 
     # Generate code for a unary operator
-    def process_unary_op(self, node, code, indent):
+    def process_UnaryOp(self, node, code, indent):
         if isinstance(node.op, ast.USub):
             op = '-'
         else:
