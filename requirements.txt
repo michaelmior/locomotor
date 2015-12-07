@@ -2,6 +2,7 @@ alabaster==0.7.6
 Babel==2.1.1
 byteplay==0.2
 docutils==0.12
+ghp-import==0.4.1
 Jinja2==2.8
 MarkupSafe==0.23
 msgpack-python==0.4.6

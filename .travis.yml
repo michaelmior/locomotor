@@ -2,8 +2,16 @@ language: python
 python:
   - "2.7"
 sudo: true
+
 before_install:
   - git clone https://github.com/antirez/redis vendor/redis
   - (cd vendor/redis; git checkout testing && make && sudo make install)
   - echo -e '\n\n\n\n\n\n' | sudo ./vendor/redis/utils/install_server.sh
-script: "python setup.py test"
+
+script:
+  - python setup.py test
+
+after_success:
+  - make -C docs html
+  - ghp-import -n docs/_build/html
+  - git push -fq https://$GH_TOKEN@github.com/$TRAVIS_REPO_SLUG.git gh-pages
