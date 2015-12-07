@@ -19,6 +19,7 @@ TAB = '  '
 PACKED_TYPES = (list, dict, types.NoneType, datetime.datetime)
 LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
 PIPELINED_CODE = open(os.path.dirname(__file__) + '/lua/pipelined.lua').read()
+FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
 UNPIPELINED_CODE = """
 local __PIPE_ADD = function(key, value) return value end
 """
@@ -671,9 +672,15 @@ class RedisFuncFragment(object):
         # Generate code for all helper functions
         helper_functions = ''
         for method_name in helpers:
-            # We only need to deal with helper functions
-            if method_name[0] != 'self':
+            # We can skip Redis calls or calls to what we assume
+            # are builtin functions
+            if method_name[0] in map(lambda x: x.id, self.redis_objs) or \
+               method_name[1] in FUNC_BUILTINS:
                 continue
+
+            # Anything else which is not a call on self is an error
+            if method_name[0] != 'self':
+                raise Exception()
 
             # XXX We currently assume that methods called by the method
             #     we're translating do not access any attributes of
