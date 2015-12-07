@@ -224,7 +224,6 @@ class RedisFuncFragment(object):
                 if expr[0] == 'self':
                     # Keep hold of any attributes of self we need
                     outlist.append(expr)
-                    continue
                 elif expr[1].upper():
                     # Delete constants we don't need
                     continue
