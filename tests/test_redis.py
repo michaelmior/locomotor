@@ -82,6 +82,16 @@ def test_nil(redis):
 
     assert nil(redis) == None
 
+def test_nil_constant(redis):
+    class Foo:
+        POTATO = None
+
+        @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+        def nil(self, client):
+            return self.POTATO
+
+    assert Foo().nil(redis) == None
+
 def test_function(redis):
     class Foo:
         KEY_SUFFIX = '1'

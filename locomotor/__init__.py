@@ -17,7 +17,7 @@ from .identify import *
 
 TAB = '  '
 SELF_ARG = 'SELF__'
-PACKED_TYPES = (list, dict)
+PACKED_TYPES = (list, dict, types.NoneType)
 LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
 PIPELINED_CODE = open(os.path.dirname(__file__) + '/lua/pipelined.lua').read()
 UNPIPELINED_CODE = """
