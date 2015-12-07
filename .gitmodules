@@ -1,3 +1,6 @@
 [submodule "vendor/pytpcc"]
 	path = vendor/pytpcc
 	url = https://github.com/apavlo/py-tpcc.git
+[submodule "vendor/retwis-py"]
+	path = vendor/retwis-py
+	url = https://github.com/pims/retwis-py.git
