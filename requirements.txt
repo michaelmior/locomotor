@@ -13,5 +13,6 @@ six==1.10.0
 snowballstemmer==1.2.0
 Sphinx==1.3.3
 sphinx-rtd-theme==0.1.9
+sphinxjp.themes.basicstrap==0.4.3
 -e git+https://github.com/michaelmior/sully.git@c49dc727b40d22f11305433bfd988f425feca248#egg=sully-master
 wheel==0.24.0
