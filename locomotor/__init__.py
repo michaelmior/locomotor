@@ -16,7 +16,6 @@ import time
 from .identify import *
 
 TAB = '  '
-SELF_ARG = 'SELF__'
 PACKED_TYPES = (list, dict, types.NoneType, datetime.datetime)
 LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
 PIPELINED_CODE = open(os.path.dirname(__file__) + '/lua/pipelined.lua').read()
@@ -211,7 +210,9 @@ class RedisFuncFragment(object):
         for expr in expressions:
             if isinstance(expr, tuple):
                 if expr[0] == 'self':
-                    outlist.append(SELF_ARG + expr[1])
+                    # Keep hold of any attributes of self we need
+                    outlist.append(expr)
+                    continue
                 elif expr[1].upper():
                     # Delete constants we don't need
                     continue
@@ -284,8 +285,8 @@ class RedisFuncFragment(object):
             raise Exception()
 
         if obj == 'self':
-            # Use a new argument to handle this
-            expr = SELF_ARG + node.attr
+            # Access the Lua table corresponding to self
+            expr = 'self.' + node.attr
         else:
             expr = self.get_constant((obj, node.attr))
 
@@ -408,7 +409,7 @@ class RedisFuncFragment(object):
 
         # Check if we have a method call
         elif node.func.value.id == 'self':
-            line = '%s(%s)' % (SELF_ARG + node.func.attr, args)
+            line = '%s(%s)' % ('self.' + node.func.attr, args)
 
         # XXX Assume this is a Redis pipeline execution
         elif node.func.attr == 'pipe':
@@ -664,7 +665,7 @@ class RedisFuncFragment(object):
         # Unpack arguments to their original names performing
         # any necessary type conversions
         # XXX We assume arguments will always have the same type
-        arg_unpacking = ''
+        arg_unpacking = 'local self = {}\n'
         new_args = 0
 
         # Generate code for all helper functions
@@ -689,21 +690,28 @@ class RedisFuncFragment(object):
                     new_args += 1
 
             # Dump the helper function code into a local variable
-            helper_functions += 'local %s = function(%s)\n%s\nend\n' % \
-                    (SELF_ARG + method_name[1],
-                            ', '.join(wrapped.arg_names), wrapped.body)
+            helper_functions += 'self.%s = function(%s)\n%s\nend\n' % \
+                    (method_name[1],
+                     ', '.join(wrapped.arg_names), wrapped.body)
 
         for i, name in enumerate(self.in_exprs[start_arg:]):
             # Perform the lookup for class variables
             # We should be able to extend this to support multiple lookups
             # i.e., self.foo.bar
-            if name.startswith(SELF_ARG):
-                arg = getattr(method_self, name[len(SELF_ARG):])
+            if isinstance(name, tuple):
+                if name[0] == 'self':
+                    definition = 'self.%s' % name[1]
+                    arg = getattr(method_self, name[1])
+                else:
+                    # XXX This shouldn't happen yet since we don't support
+                    #     accessing things on objects other than self
+                    raise Exception()
             else:
+                definition = 'local %s' % self.in_exprs[i + start_arg]
                 arg = args[i + start_arg]
 
-            arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
-                    (self.in_exprs[i + start_arg], self.arg_conversion(arg),
+            arg_unpacking += '%s = %s(ARGV[%d])\n' % \
+                    (definition, self.arg_conversion(arg),
                      i + start_arg + 1)
 
             # Track if this is a dictionary so we know if we
@@ -767,8 +775,8 @@ class RedisFuncFragment(object):
             # Get all the arguments to go to the function
             arg_exprs = copy.copy(self.arg_names)
             for attr in self.in_exprs:
-                if attr.startswith(SELF_ARG):
-                    arg_exprs.append('self.%s' % attr[len(SELF_ARG):])
+                if isinstance(attr, tuple):
+                    arg_exprs.append('.'.join(attr))
 
             # XXX For now, there can be only one
             client_arg = self.redis_objs[0].id
