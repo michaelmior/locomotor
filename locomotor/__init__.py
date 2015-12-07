@@ -578,6 +578,16 @@ class RedisFuncFragment(object):
 
         return LuaBlock(code)
 
+    # Returns the function used to convert this argument to Lua
+    def arg_conversion(self, arg):
+        if isinstance(arg, (int, long, float)):
+            # Convert numbers from string form
+            return 'tonumber'
+        elif isinstance(arg, PACKED_TYPES):
+            return 'cmsgpack.unpack'
+        else:
+            return ''
+
     # Generate code to unpack arguments with their correct name and type
     def unpack_args(self, args, start_arg=0, helpers=[],
                     method_self=None):
@@ -622,16 +632,8 @@ class RedisFuncFragment(object):
             else:
                 arg = args[i + start_arg]
 
-            if isinstance(arg, (int, long, float)):
-                # Convert numbers from string form
-                conversion = 'tonumber'
-            elif isinstance(arg, PACKED_TYPES):
-                conversion = 'cmsgpack.unpack'
-            else:
-                conversion = ''
-
             arg_unpacking += 'local %s = %s(ARGV[%d])\n' % \
-                    (self.in_exprs[i + start_arg], conversion,
+                    (self.in_exprs[i + start_arg], self.arg_conversion(arg),
                      i + start_arg + 1)
 
             # Track if this is a dictionary so we know if we
