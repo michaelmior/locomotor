@@ -1,4 +1,5 @@
 import ast
+import datetime
 import imp
 import pytest
 
@@ -398,3 +399,11 @@ def test_delete(redis):
     redis.set('foo', 'bar')
     delete(redis)
     assert redis.get('foo') == None
+
+def test_datetime(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def convert_datetime(client, dt):
+        return dt
+
+    # XXX We do not properly round trip datetime objects yet
+    assert convert_datetime(redis, datetime.datetime.now()) is not None
