@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import msgpack
 import os
+import re
 import redis
 import sully
 import time
@@ -252,331 +253,387 @@ class RedisFuncFragment(object):
     def process_node(self, node, indent=0):
         code = []
 
-        if isinstance(node, (ast.Expr, ast.Index)):
-            code.append(self.process_node(node.value, indent))
-        elif isinstance(node, ast.Assign):
-            value = self.process_node(node.value, indent).code
+        # Get the corresponding method name
+        cls = node.__class__.__name__
+        method = '_'.join(x.lower() \
+                for x in re.split('([A-Z][a-z]*)', cls) if x)
 
-            for var in node.targets:
-                names = set([var.id])
-                line = '%s = %s;' % (var.id, value)
-                code.append(LuaLine(line, node, indent, names))
-        elif isinstance(node, (ast.List, ast.Tuple)):
-            line = '{' + \
-                ', '.join(self.process_node(n).code for n in node.elts) + '}'
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Return):
-            retval = self.process_node(node.value).code
-
-            # If this is the final return value, pack it up with cmsgpack
-            if self.helper:
-                line = 'return %s' % retval
-            else:
-                line = 'return __RETVAL(%s, true)' % retval
-
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Name):
-            # Replace common constants (assuming they are not redefined)
-            if node.id == 'None':
-                name = 'nil'
-            elif node.id in ('True', 'False'):
-                name = node.id.lower()
-
-            # Uppercase names are assumed to be constants
-            elif node.id.isupper():
-                name = self.get_constant((node.id,))
-
-            # Otherwise we assume a local variable
-            else:
-                name = node.id
-
-            code.append(LuaLine(name, node, indent))
-        elif isinstance(node, ast.For):
-            # Get the list we are looping over
-            for_list = self.process_node(node.iter).code
-
-            # Try to find a comma in the list
-            try:
-                comma_index = for_list.index(',')
-            except ValueError:
-                comma_index = False
-
-            # This is a dumb heuristic and we just propagate this information
-            # if we were more careful, but we check for a digit followed by
-            # a comma to see if this is a loop over a range or a list
-            if comma_index is not False and for_list[0:comma_index].isdigit():
-                line = 'for %s=%s do' % (node.target.id, for_list)
-            else:
-                line = 'for _, %s in ipairs(%s) do' % \
-                        (node.target.id, for_list)
-
-            code.append(LuaLine(line, node, indent))
-
-            # Add a nested loop with only one iteration
-            # which will allow us to break out when needed
-            code.append(LuaLine('repeat', node, indent + 1))
-
-            # Add all statements in the body
-            for n in node.body:
-                code.append(self.process_node(n, indent + 2))
-
-            # End the nested loop from above
-            code.append(LuaLine('until true', node, indent + 1))
-
-            code.append(LuaLine('end', [], indent))
-        elif isinstance(node, ast.Continue):
-            # We use the hack below of nested loops to implement continue,
-            # so we just break out of that inner loop here
-            # http://stackoverflow.com/a/25781200/123695
-            # We have to embed this in a dummy conditional since for syntactic
-            # reasons, break must always be the last statement in a block
-            code.append(LuaLine('if true then break end', [], indent))
-        elif isinstance(node, ast.BoolOp):
-            values = ['(' + self.process_node(n).code + ')'
-                      for n in node.values]
-
-            if isinstance(node.op, ast.Or):
-                op = ' or '
-            elif isinstance(node.op, ast.And):
-                op = ' and '
-            else:
-                # XXX Some unhandled operator
-                print(node.op)
-                raise Exception()
-
-            code.append(LuaLine(op.join(values), node, indent))
-        elif isinstance(node, ast.UnaryOp):
-            if isinstance(node.op, ast.USub):
-                op = '-'
-            else:
-                # XXX Some unhandled operator
-                print(node.op)
-                raise Exception()
-
-            line = op + self.process_node(node.operand).code
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.BinOp):
-            op1 = self.process_node(node.left).code
-            op2 = self.process_node(node.right).code
-
-            if isinstance(node.op, ast.Add):
-                # Guess if either operand is a number
-                if op1.isdigit() or op2.isdigit():
-                    op = ' + '
-                else:
-                    op = ' .. '
-            elif isinstance(node.op, ast.Sub):
-                op = ' - '
-            elif isinstance(node.op, ast.Mod):
-                op = ' % '
-            elif isinstance(node.op, ast.Mult):
-                op = ' * '
-            elif isinstance(node.op, ast.Div):
-                op = ' / '
-            elif isinstance(node.op, ast.Pow):
-                op = ' ^ '
-            else:
-                # XXX Some unhandled operator
-                print(node.op)
-                raise Exception()
-
-            line = op1 + op + op2
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Str):
-            line = self.convert_value(node.s)
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Num):
-            line = self.convert_value(node.n)
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Call):
-            # We don't support positional or keyword arguments
-            if node.starargs or node.kwargs:
-                raise Exception()
-
-            raw_args = [self.process_node(n) for n in node.args]
-            args = ', '.join(arg.code for arg in raw_args)
-
-            # Handle some built-in functions
-            if isinstance(node.func, ast.Name):
-                if node.func.id in ('int', 'float'):
-                    line = 'tonumber(%s)' % args
-                elif node.func.id == 'str':
-                    line = 'tostring(%s)' % args
-                elif node.func.id in ('range', 'xrange'):
-                    # Extend to always use three arguments
-                    if len(node.args) == 1:
-                        args = '0, %s - 1, 1' % args
-                    elif len(node.args) == 2:
-                        args += ' - 1, 1'
-
-                    line = args
-                else:
-                    # XXX We don't know how to handle this function
-                    print(ast.dump(node.func))
-                    raise Exception()
-
-            # XXX We assume now that the function being called is an Attribute
-
-            # Perform string replacement
-            # XXX This is somewhat annoying but we have to wrap this up in an
-            #     anonymous function to avoid accidentally capturing the second
-            #     value produced by gsub when this expression is used later
-            elif node.func.attr == 'replace':
-                line = '((function() local __TEMP, _; ' \
-                       '__TEMP, _ = string.gsub(%s, %s); ' \
-                       'return __TEMP end)())' \
-                        % (self.process_node(node.func.value).code, args)
-
-            # Join a table of strings
-            elif node.func.attr == 'join':
-                line = 'table.concat(%s, %s)\n' \
-                        % (args, self.process_node(node.func.value).code)
-
-            # If we're calling append, add to the end of a list
-            elif node.func.attr == 'append':
-                line = 'table.insert(%s, %s)' \
-                        % (self.process_node(node.func.value).code, args)
-
-            # If we're calling insert, add to the appropriate list position
-            elif node.func.attr == 'insert':
-                line = 'table.insert(%s, %s + 1, %s)\n' \
-                        % (self.process_node(node.func.value).code,
-                           raw_args[0].code, raw_args[1].code)
-
-            # Check if we have a method call
-            elif node.func.value.id == 'self':
-                line = '%s(%s)' % (SELF_ARG + node.func.attr, args)
-
-            # XXX Assume this is a Redis pipeline execution
-            elif node.func.attr == 'pipe':
-                # Do nothing to start a pipeline
-                line = ''
-            elif node.func.attr == 'execute':
-                expr = self.process_node(node.func.value).code
-                line = '__PIPE_GET(\'%s\')' % expr
-
-            # XXX Otherwise, assume this is a redis function call
-            elif any(sully.nodes_equal(node.func.value, obj)
-                    for obj in self.redis_objs):
-                # Generate the Redis function call expression
-                cmd = node.func.attr
-                if cmd == 'delete':
-                    cmd = 'del'
-                call = 'redis.call(\'%s\', %s)' % (cmd, args)
-
-                # Wrap the Redis call in a function which stores the
-                # result if needed later for pipelining and returns it
-                expr = self.process_node(node.func.value).code
-                line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
-            else:
-                # XXX Something we can't handle
-                print(ast.dump(node))
-                raise Exception()
-
-            if line:
-                code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.If):
-            # Add a line for the initial test
-            test = self.process_node(node.test).code
-            line = 'if %s then' % test
-            code.append(LuaLine(line, node, indent))
-
-            # Generate the body of the if block
-            for n in node.body:
-                code.append(self.process_node(n, indent + 1))
-
-            # Generate the body of the else branch
-            if len(node.orelse) > 0:
-                code.append(LuaLine('else', [], indent))
-            for n in node.orelse:
-                code.append(self.process_node(n, indent + 1))
-
-            # Close the if block
-            code.append(LuaLine('end', [], indent))
-        elif isinstance(node, ast.Compare):
-            # XXX We only handle a single comparison
-            if len(node.ops) != 1 or len(node.comparators) != 1:
-                raise Exception()
-
-            lhs = self.process_node(node.left).code
-
-            if isinstance(node.ops[0], ast.Eq):
-                op = ' == '
-            elif isinstance(node.ops[0], ast.NotEq):
-                op = ' ~= '
-            elif isinstance(node.ops[0], ast.Gt):
-                op = ' > '
-            elif isinstance(node.ops[0], ast.GtE):
-                op = ' >= '
-            elif isinstance(node.ops[0], ast.Lt):
-                op = ' < '
-            elif isinstance(node.ops[0], ast.LtE):
-                op = ' <= '
-            else:
-                # XXX We don't handle this type of comparison
-                print(node.ops[0])
-                raise Exception()
-
-            rhs = self.process_node(node.comparators[0]).code
-            line = '%s %s %s' % (lhs, op, rhs)
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Attribute):
-            obj = self.process_node(node.value).code
-
-            # XXX Assume uppercase values are constants
-            if obj != 'self' and not node.attr.isupper():
-                # XXX We're probably doing some external stuff we can't handle
-                raise Exception()
-
-            if obj == 'self':
-                # Use a new argument to handle this
-                expr = SELF_ARG + node.attr
-            else:
-                expr = self.get_constant((obj, node.attr))
-
-            code.append(LuaLine(expr, node, indent))
-        elif isinstance(node, ast.Subscript):
-            subs = self.process_node(node.slice).code
-            expr = self.process_node(node.value).code
-
-            # Here we check the __DICT property of the object to see if
-            # it is not a dictionary in which case we add 1 to the index
-            line = '%s[(%s.__DICT) and (%s) or (%s + 1)]' % \
-                    (expr, expr, subs, subs)
-
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Print):
-            # We only handle prints to stdout
-            if node.dest is not None:
-                raise Exception()
-
-            # Add a log statement for each print
-            for value in node.values:
-                value = self.process_node(value)
-                line = 'redis.log(redis.LOG_DEBUG, %s)' % value
-                code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.Pass):
-            line = 'do end'
-            code.append(LuaLine(line, node, indent))
-        elif isinstance(node, ast.AugAssign):
-            target = self.process_node(node.target).code
-            value = self.process_node(node.value).code
-
-            if isinstance(node.op, ast.Add):
-                line = '%s = %s + %s' % (target, target, value)
-            else:
-                # XXX Some unhandled operator
-                print(node.op)
-                raise Exception()
-
-            code.append(LuaLine(line, node, indent))
-        else:
+        # Call the method or produce an error if it does not exist
+        try:
+            getattr(self, 'process_' + method)(node, code, indent)
+        except KeyError:
             # XXX This type of node is not handled
             print(ast.dump(node))
             print(node._fields)
             raise Exception()
 
         return LuaBlock(code)
+
+    # Generate code for an assignment operation
+    def process_assign(self, node, code, indent):
+        value = self.process_node(node.value, indent).code
+
+        for var in node.targets:
+            names = set([var.id])
+            line = '%s = %s;' % (var.id, value)
+            code.append(LuaLine(line, node, indent, names))
+
+    # Generate code for an attribute access x.y
+    def process_attribute(self, node, code, indent):
+        obj = self.process_node(node.value).code
+
+        # XXX Assume uppercase values are constants
+        if obj != 'self' and not node.attr.isupper():
+            # XXX We're probably doing some external stuff we can't handle
+            raise Exception()
+
+        if obj == 'self':
+            # Use a new argument to handle this
+            expr = SELF_ARG + node.attr
+        else:
+            expr = self.get_constant((obj, node.attr))
+
+        code.append(LuaLine(expr, node, indent))
+
+    # Generate code for agumented assignment (e.g. +=)
+    def process_aug_assign(self, node, code, indent):
+        target = self.process_node(node.target).code
+        value = self.process_node(node.value).code
+
+        if isinstance(node.op, ast.Add):
+            line = '%s = %s + %s' % (target, target, value)
+        else:
+            # XXX Some unhandled operator
+            print(node.op)
+            raise Exception()
+
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a binary operator
+    def process_bin_op(self, node, code, indent):
+        op1 = self.process_node(node.left).code
+        op2 = self.process_node(node.right).code
+
+        if isinstance(node.op, ast.Add):
+            # Guess if either operand is a number
+            # XXX This will fail if we add two numerical variables
+            if op1.isdigit() or op2.isdigit():
+                op = ' + '
+            else:
+                op = ' .. '
+        elif isinstance(node.op, ast.Sub):
+            op = ' - '
+        elif isinstance(node.op, ast.Mod):
+            op = ' % '
+        elif isinstance(node.op, ast.Mult):
+            op = ' * '
+        elif isinstance(node.op, ast.Div):
+            op = ' / '
+        elif isinstance(node.op, ast.Pow):
+            op = ' ^ '
+        else:
+            # XXX Some unhandled operator
+            print(node.op)
+            raise Exception()
+
+        line = op1 + op + op2
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a boolean operator
+    def process_bool_op(self, node, code, indent):
+        values = ['(' + self.process_node(n).code + ')' for n in node.values]
+
+        if isinstance(node.op, ast.Or):
+            op = ' or '
+        elif isinstance(node.op, ast.And):
+            op = ' and '
+        else:
+            # XXX Some unhandled operator
+            print(node.op)
+            raise Exception()
+
+        code.append(LuaLine(op.join(values), node, indent))
+
+    # Generate code for a function call
+    def process_call(self, node, code, indent):
+        # We don't support positional or keyword arguments
+        if node.starargs or node.kwargs:
+            raise Exception()
+
+        raw_args = [self.process_node(n) for n in node.args]
+        args = ', '.join(arg.code for arg in raw_args)
+
+        # Handle some built-in functions
+        if isinstance(node.func, ast.Name):
+            if node.func.id in ('int', 'float'):
+                line = 'tonumber(%s)' % args
+            elif node.func.id == 'str':
+                line = 'tostring(%s)' % args
+            elif node.func.id in ('range', 'xrange'):
+                # Extend to always use three arguments
+                if len(node.args) == 1:
+                    args = '0, %s - 1, 1' % args
+                elif len(node.args) == 2:
+                    args += ' - 1, 1'
+
+                line = args
+            else:
+                # XXX We don't know how to handle this function
+                print(ast.dump(node.func))
+                raise Exception()
+
+        # XXX We assume now that the function being called is an Attribute
+
+        # Perform string replacement
+        elif node.func.attr == 'replace':
+            line = '((function() local __TEMP, _; ' \
+                    '__TEMP, _ = string.gsub(%s, %s); ' \
+                    'return __TEMP end)())' \
+                    % (self.process_node(node.func.value).code, args)
+
+        # Join a table of strings
+        elif node.func.attr == 'join':
+            line = 'table.concat(%s, %s)\n' \
+                    % (args, self.process_node(node.func.value).code)
+
+        # If we're calling append, add to the end of a list
+        elif node.func.attr == 'append':
+            line = 'table.insert(%s, %s)' \
+                    % (self.process_node(node.func.value).code, args)
+
+        # If we're calling insert, add to the appropriate list position
+        elif node.func.attr == 'insert':
+            line = 'table.insert(%s, %s + 1, %s)\n' \
+                    % (self.process_node(node.func.value).code,
+                            raw_args[0].code, raw_args[1].code)
+
+        # Check if we have a method call
+        elif node.func.value.id == 'self':
+            line = '%s(%s)' % (SELF_ARG + node.func.attr, args)
+
+        # XXX Assume this is a Redis pipeline execution
+        elif node.func.attr == 'pipe':
+            # Do nothing to start a pipeline
+                line = ''
+        elif node.func.attr == 'execute':
+            expr = self.process_node(node.func.value).code
+            line = '__PIPE_GET(\'%s\')' % expr
+
+        # XXX Otherwise, assume this is a redis function call
+        elif any(sully.nodes_equal(node.func.value, obj)
+            for obj in self.redis_objs):
+            # Generate the Redis function call expression
+            cmd = node.func.attr
+            if cmd == 'delete':
+                cmd = 'del'
+            call = 'redis.call(\'%s\', %s)' % (cmd, args)
+
+            # Wrap the Redis call in a function which stores the
+            # result if needed later for pipelining and returns it
+            expr = self.process_node(node.func.value).code
+            line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
+        else:
+            # XXX Something we can't handle
+            print(ast.dump(node))
+            raise Exception()
+
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a comparison operation
+    def process_compare(self, node, code, indent):
+        # XXX We only handle a single comparison
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            raise Exception()
+
+        lhs = self.process_node(node.left).code
+
+        if isinstance(node.ops[0], ast.Eq):
+            op = ' == '
+        elif isinstance(node.ops[0], ast.NotEq):
+            op = ' ~= '
+        elif isinstance(node.ops[0], ast.Gt):
+            op = ' > '
+        elif isinstance(node.ops[0], ast.GtE):
+            op = ' >= '
+        elif isinstance(node.ops[0], ast.Lt):
+            op = ' < '
+        elif isinstance(node.ops[0], ast.LtE):
+            op = ' <= '
+        else:
+            # XXX We don't handle this type of comparison
+            print(node.ops[0])
+            raise Exception()
+
+        rhs = self.process_node(node.comparators[0]).code
+        line = '%s %s %s' % (lhs, op, rhs)
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a continue statement
+    def process_continue(self, node, code, indent):
+        # We use the hack below of nested loops to implement continue,
+        # so we just break out of that inner loop here
+        # http://stackoverflow.com/a/25781200/123695
+        # We have to embed this in a dummy conditional since for syntactic
+        # reasons, break must always be the last statement in a block
+        code.append(LuaLine('if true then break end', [], indent))
+
+    # Generate code for an expression
+    def process_expr(self, node, code, indent):
+        code.append(self.process_node(node.value, indent))
+
+    # Generate code for a for loop
+    def process_for(self, node, code, indent):
+        # Get the list we are looping over
+        for_list = self.process_node(node.iter).code
+
+        # Try to find a comma in the list
+        try:
+            comma_index = for_list.index(',')
+        except ValueError:
+            comma_index = False
+
+        # This is a dumb heuristic and we just propagate this information
+        # if we were more careful, but we check for a digit followed by
+        # a comma to see if this is a loop over a range or a list
+        if comma_index is not False and for_list[0:comma_index].isdigit():
+            line = 'for %s=%s do' % (node.target.id, for_list)
+        else:
+            line = 'for _, %s in ipairs(%s) do' % \
+                    (node.target.id, for_list)
+
+        code.append(LuaLine(line, node, indent))
+
+        # Add a nested loop with only one iteration
+        # which will allow us to break out when needed
+        code.append(LuaLine('repeat', node, indent + 1))
+
+        # Add all statements in the body
+        for n in node.body:
+            code.append(self.process_node(n, indent + 2))
+
+        # End the nested loop from above
+        code.append(LuaLine('until true', node, indent + 1))
+
+        # End the outer loop
+        code.append(LuaLine('end', [], indent))
+
+    # Generate code for an if statement
+    def process_if(self, node, code, indent):
+        # Add a line for the initial test
+        test = self.process_node(node.test).code
+        line = 'if %s then' % test
+        code.append(LuaLine(line, node, indent))
+
+        # Generate the body of the if block
+        for n in node.body:
+            code.append(self.process_node(n, indent + 1))
+
+        # Generate the body of the else branch
+        if len(node.orelse) > 0:
+            code.append(LuaLine('else', [], indent))
+        for n in node.orelse:
+            code.append(self.process_node(n, indent + 1))
+
+        # Close the if block
+        code.append(LuaLine('end', [], indent))
+
+    # Generate code for an index value
+    def process_index(self, node, code, indent):
+        return self.process_expr(node, code, indent)
+
+    # Generatec code for a list constant
+    def process_list(self, node, code, indent):
+        line = '{' + \
+               ', '.join(self.process_node(n).code for n in node.elts) + '}'
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a simple variable name
+    def process_name(self, node, code, indent):
+        # Replace common constants (assuming they are not redefined)
+        if node.id == 'None':
+            name = 'nil'
+        elif node.id in ('True', 'False'):
+            name = node.id.lower()
+
+        # Uppercase names are assumed to be constants
+        elif node.id.isupper():
+            name = self.get_constant((node.id,))
+
+            # Otherwise we assume a local variable
+        else:
+            name = node.id
+
+        code.append(LuaLine(name, node, indent))
+
+    # Generate code for a numberical constant
+    def process_num(self, node, code, indent):
+        line = self.convert_value(node.n)
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for `pass`
+    def process_pass(self, node, code, indent):
+        line = 'do end'
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a print statement
+    def process_print(self, node, code, indent):
+        # XXX This changes behaviour to log to Redis instead
+        #     of print on the application side
+
+        # We only handle prints to stdout
+        if node.dest is not None:
+            raise Exception()
+
+        # Add a log statement for each print
+        for value in node.values:
+            value = self.process_node(value)
+            line = 'redis.log(redis.LOG_DEBUG, %s)' % value
+            code.append(LuaLine(line, node, indent))
+
+    # Generate code for a return statement
+    def process_return(self, node, code, indent):
+        retval = self.process_node(node.value).code
+
+        # If this is the final return value, pack it up with cmsgpack
+        if self.helper:
+            line = 'return %s' % retval
+        else:
+            line = 'return __RETVAL(%s, true)' % retval
+
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a string constant
+    def process_str(self, node, code, indent):
+        line = self.convert_value(node.s)
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a subscript []
+    def process_subscript(self, node, code, indent):
+        subs = self.process_node(node.slice).code
+        expr = self.process_node(node.value).code
+
+        # Here we check the __DICT property of the object to see if
+        # it is not a dictionary in which case we add 1 to the index
+        line = '%s[(%s.__DICT) and (%s) or (%s + 1)]' % \
+                (expr, expr, subs, subs)
+
+        code.append(LuaLine(line, node, indent))
+
+    # Generate code for a tuple constant
+    def process_tuple(self, node, code, indent):
+        return self.process_list(node, code, indent)
+
+    # Generate code for a unary operator
+    def process_unary_op(self, node, code, indent):
+        if isinstance(node.op, ast.USub):
+            op = '-'
+        else:
+            # XXX Some unhandled operator
+            print(node.op)
+            raise Exception()
+
+        line = op + self.process_node(node.operand).code
+        code.append(LuaLine(line, node, indent))
 
     # Returns the function used to convert this argument to Lua
     def arg_conversion(self, arg):
