@@ -79,9 +79,9 @@ def identify_redis_funcs(cls_or_mod):
 
         val = getattr(cls_or_mod, obj)
 
-        if isinstance(val, (types.ClassType)):
+        if isinstance(val, (type, types.ClassType)):
             # Recursively check all classes
-            class_funcs = identify_redis_funcs(cls_or_mod)
+            class_funcs = identify_redis_funcs(val)
             redis_funcs.update(class_funcs)
         elif isinstance(val, (types.FunctionType, types.MethodType)):
             # Identify Redis objects within the function

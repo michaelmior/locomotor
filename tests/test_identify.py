@@ -38,7 +38,7 @@ def test_good_evidence():
     assert len(identify_redis_objs(yes_redis)) == 1
 
 def test_tpcc_funcs():
-    funcs = identify_redis_funcs(redisdriver.RedisDriver)
+    funcs = identify_redis_funcs(redisdriver)
     assert redisdriver.RedisDriver.doDelivery in funcs
 
 def test_tpcc_fragment():
