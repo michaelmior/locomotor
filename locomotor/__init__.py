@@ -373,6 +373,9 @@ class RedisFuncFragment(object):
                     args += ' - 1, 1'
 
                 line = args
+            elif node.func.id == 'len':
+                assert len(node.args) == 1
+                line = '#' + args
             else:
                 # XXX We don't know how to handle this function
                 print(ast.dump(node.func))

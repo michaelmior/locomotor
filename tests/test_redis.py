@@ -414,3 +414,17 @@ def test_unary(redis):
         return +3
 
     assert unary(redis) == 3
+
+def test_array_len(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def array_len(client):
+        return len([1, 2, 3])
+
+    assert array_len(redis) == 3
+
+def test_string_len(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def string_len(client):
+        return len('foo')
+
+    assert string_len(redis) == 3
