@@ -39,7 +39,9 @@ FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
 DEBUG_LOG_CHANNEL = 'locomotor-debug'
 
 #: A flag to control Lua script debug messages
-LUA_DEBUG = True
+# XXX This may result in changed behaviour since printing expressions
+#     currently may have side effects but this should be fixable
+LUA_DEBUG = False
 
 
 def decode_msgpack(obj):
@@ -633,8 +635,6 @@ class RedisFuncFragment(object):
         # Generate the body of the else branch
         if len(node.orelse) > 0:
             code.append(LuaLine('else', [], indent))
-
-        if LUA_DEBUG:
             code.append(LuaLine.debug('CONDITION FALSE, ELSE'))
 
         for n in node.orelse:
@@ -837,8 +837,11 @@ class RedisFuncFragment(object):
             # Track if this is a dictionary so we know if we
             # need to add one to indexes into the Lua table
             if isinstance(arg, dict):
-                arg_unpacking += '%s.__DICT = true\n' % \
-                                 self.in_exprs[i + start_arg]
+                expr = self.in_exprs[i + start_arg]
+                if isinstance(expr, tuple):
+                    expr = '.'.join(expr)
+
+                arg_unpacking += '%s.__DICT = true\n' % expr
 
         # Expand any necessary helper arguments
         if new_args > 0:
@@ -880,12 +883,20 @@ class RedisFuncFragment(object):
         # Check if this is a method and pull the correct arguments
         if self.method:
             method_self = args[0]
-            client = args[1]
-            args = list(args[2:])
+            args = list(args[1:])
         else:
             method_self = None
-            client = args[0]
-            args = list(args[1:])
+            args = list(args)
+
+        # Remove the client arguments from what is serialized and
+        # pick the first client to actually use
+        # XXX We do not actually support multiple different clients
+        clients = []
+        for arg in args[:]:
+            if isinstance(arg, redis.StrictRedis):
+                clients.append(arg)
+                args.remove(arg)
+        client = clients[0]
 
         # Register this script if needed
         if self.script_id is None:
