@@ -35,6 +35,12 @@ local __PIPE_ADD = function(key, value) return value end
 #: Function names which we assume are builtins
 FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
 
+#: A channel used to push debug messages from Lua scripts
+DEBUG_LOG_CHANNEL = 'locomotor-debug'
+
+#: A flag to control Lua script debug messages
+LUA_DEBUG = True
+
 
 def decode_msgpack(obj):
     # TODO: Convert datetime objects back
@@ -63,12 +69,18 @@ class LuaBlock(object):
         return ''.join(line.code for line in self.lines)
 
     def append(self, line):
+        if not line:
+            return
+
         self.lines.append(line)
         self.names.update(line.names)
         line.names = set()
 
     def extend(self, block):
         for line in block.lines:
+            if not line:
+                continue
+
             self.append(line)
 
         self.names.update(block.names)
@@ -103,6 +115,26 @@ class LuaLine(object):
         self.node = node
         self.indent = indent
         self.names = names
+
+    @staticmethod
+    def debug(message, *args):
+        if LUA_DEBUG:
+            # Escape quotes in the message
+            message = message.replace("'", "\\'")
+
+            # Format using arguments if provided
+            if len(args) > 0:
+                message = "string.format('%s', %s)" % \
+                          (message, ', '.join('tostring(%s)' % arg
+                                              for arg in args))
+            else:
+                message = "'%s'" % message
+
+            # Publish the message to the debug channel
+            return LuaLine("redis.call('publish', '%s', %s);" %
+                           (DEBUG_LOG_CHANNEL, message))
+        else:
+            return None
 
     def __repr__(self):
         return repr(str(self))
@@ -297,6 +329,11 @@ class RedisFuncFragment(object):
             names = set([var.id])
             line = '%s = %s;' % (var.id, value)
             code.append(LuaLine(line, node, indent, names))
+
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('ASSIGNING %%s TO %s' %
+                                      ', '.join(v.id for v in node.targets),
+                                      value))
 
     def process_Attribute(self, node, code, indent):
         """Generate code for an attribute access x.y"""
@@ -500,6 +537,9 @@ class RedisFuncFragment(object):
     def process_Continue(self, node, code, indent):
         """Generate code for a continue statement"""
 
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('LOOP CONTINUE'))
+
         # We use the hack below of nested loops to implement continue,
         # so we just break out of that inner loop here
         # http://stackoverflow.com/a/25781200/123695
@@ -545,6 +585,9 @@ class RedisFuncFragment(object):
             line = 'for _, %s in ipairs(%s) do' % \
                    (node.target.id, for_list)
 
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('STARTING LOOP OVER %s' % for_list))
+
         code.append(LuaLine(line, node, indent))
 
         # Add a nested loop with only one iteration
@@ -563,11 +606,18 @@ class RedisFuncFragment(object):
 
     def process_If(self, node, code, indent):
         """Generate code for an if statement"""
+        # Generate code for the test expression
+        test = self.process_node(node.test).code
+
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('CHECKING CONDITION %s' % test))
 
         # Add a line for the initial test
-        test = self.process_node(node.test).code
         line = 'if %s then' % test
         code.append(LuaLine(line, node, indent))
+
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('CONDITION TRUE'))
 
         # Generate the body of the if block
         for n in node.body:
@@ -576,6 +626,10 @@ class RedisFuncFragment(object):
         # Generate the body of the else branch
         if len(node.orelse) > 0:
             code.append(LuaLine('else', [], indent))
+
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('CONDITION FALSE, ELSE'))
+
         for n in node.orelse:
             code.append(self.process_node(n, indent + 1))
 
@@ -641,6 +695,9 @@ class RedisFuncFragment(object):
             line = 'redis.log(redis.LOG_DEBUG, %s)' % value
             code.append(LuaLine(line, node, indent))
 
+            if LUA_DEBUG:
+                code.append(LuaLine.debug('PRINT: %s', value))
+
     def process_Return(self, node, code, indent):
         """Generate code for a return statement"""
 
@@ -651,6 +708,9 @@ class RedisFuncFragment(object):
             line = 'return %s' % retval
         else:
             line = 'return __RETVAL(%s, true)' % retval
+
+        if LUA_DEBUG:
+            code.append(LuaLine.debug('RETURNING %s', retval))
 
         code.append(LuaLine(line, node, indent))
 
