@@ -29,8 +29,9 @@ REDIS_METHOD_COUNT = 2
 #: The percentage of method calls which must match a predefined list
 REDIS_METHOD_PCT = 0.8
 
-# Identify objects likely to be used to access Redis in the code
 def identify_redis_objs(func):
+    """Identify objects likely to be used to access Redis in the code"""
+
     redis_func_objs = []
     nonredis_func_objs = []
     func_ast = sully.get_func_ast(func)
@@ -73,8 +74,9 @@ def identify_redis_objs(func):
 
     return redis_objs
 
-# Identify functions in a class or module which use Redis
 def identify_redis_funcs(cls_or_mod):
+    """Identify functions in a class or module which use Redis"""
+
     redis_funcs = {}
 
     for obj in dir(cls_or_mod):
