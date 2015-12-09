@@ -29,6 +29,7 @@ REDIS_METHOD_COUNT = 2
 #: The percentage of method calls which must match a predefined list
 REDIS_METHOD_PCT = 0.8
 
+
 def identify_redis_objs(func):
     """Identify objects likely to be used to access Redis in the code"""
 
@@ -57,11 +58,11 @@ def identify_redis_objs(func):
         # Remove all call nodes matching this object
         redis_before = len(redis_func_objs) + 1
         redis_func_objs = [obj2 for obj2 in redis_func_objs
-                if not sully.nodes_equal(obj, obj2)]
+                           if not sully.nodes_equal(obj, obj2)]
 
         nonredis_before = len(nonredis_func_objs)
         nonredis_func_objs = [obj2 for obj2 in nonredis_func_objs
-                if not sully.nodes_equal(obj, obj2)]
+                              if not sully.nodes_equal(obj, obj2)]
 
         # If the object meets a threshold of calls for the object
         # and a certain percentage of all calls match, record it
@@ -69,10 +70,11 @@ def identify_redis_objs(func):
         nonredis_calls = nonredis_before - len(nonredis_func_objs)
         if redis_calls >= REDIS_METHOD_COUNT and \
            (redis_calls * 1.0 /
-                   (redis_calls + nonredis_calls)) >= REDIS_METHOD_PCT:
-           redis_objs.append(obj)
+               (redis_calls + nonredis_calls)) >= REDIS_METHOD_PCT:
+            redis_objs.append(obj)
 
     return redis_objs
+
 
 def identify_redis_funcs(cls_or_mod):
     """Identify functions in a class or module which use Redis"""

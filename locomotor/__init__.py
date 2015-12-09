@@ -35,14 +35,17 @@ local __PIPE_ADD = function(key, value) return value end
 #: Function names which we assume are builtins
 FUNC_BUILTINS = ('append', 'insert', 'join', 'replace')
 
+
 def decode_msgpack(obj):
     # TODO: Convert datetime objects back
     return obj
+
 
 def encode_msgpack(obj):
     if isinstance(obj, datetime.datetime):
         return time.mktime(obj.timetuple())
     return obj
+
 
 # A block of Lua code consisting of LuaLine objects
 class LuaBlock(object):
@@ -92,6 +95,7 @@ class LuaBlock(object):
         code += ''.join(str(line) for line in self.lines)
         return code
 
+
 # A line of Lua code which knows the line numbers of the corresponding Python
 class LuaLine(object):
     def __init__(self, code, node=None, indent=0, names=set()):
@@ -105,6 +109,7 @@ class LuaLine(object):
 
     def __str__(self):
         return TAB * self.indent + self.code + '\n'
+
 
 class ScriptRegistry(object):
     SCRIPTS = {}
@@ -152,6 +157,7 @@ class ScriptRegistry(object):
             retval['__value'] = None
 
         return retval
+
 
 class RedisFuncFragment(object):
     def __init__(self, taint, minlineno=None, maxlineno=None,
@@ -409,25 +415,25 @@ class RedisFuncFragment(object):
         # Perform string replacement
         elif node.func.attr == 'replace':
             line = '((function() local __TEMP, _; ' \
-                    '__TEMP, _ = string.gsub(%s, %s); ' \
-                    'return __TEMP end)())' \
-                    % (self.process_node(node.func.value).code, args)
+                   '__TEMP, _ = string.gsub(%s, %s); ' \
+                   'return __TEMP end)())' \
+                   % (self.process_node(node.func.value).code, args)
 
         # Join a table of strings
         elif node.func.attr == 'join':
             line = 'table.concat(%s, %s)\n' \
-                    % (args, self.process_node(node.func.value).code)
+                   % (args, self.process_node(node.func.value).code)
 
         # If we're calling append, add to the end of a list
         elif node.func.attr == 'append':
             line = 'table.insert(%s, %s)' \
-                    % (self.process_node(node.func.value).code, args)
+                   % (self.process_node(node.func.value).code, args)
 
         # If we're calling insert, add to the appropriate list position
         elif node.func.attr == 'insert':
             line = 'table.insert(%s, %s + 1, %s)\n' \
-                    % (self.process_node(node.func.value).code,
-                            raw_args[0].code, raw_args[1].code)
+                   % (self.process_node(node.func.value).code,
+                      raw_args[0].code, raw_args[1].code)
 
         # Check if we have a method call
         elif node.func.value.id == 'self':
@@ -443,7 +449,7 @@ class RedisFuncFragment(object):
 
         # XXX Otherwise, assume this is a redis function call
         elif any(sully.nodes_equal(node.func.value, obj)
-            for obj in self.redis_objs):
+                 for obj in self.redis_objs):
             # Generate the Redis function call expression
             cmd = node.func.attr
             if cmd == 'delete':
@@ -537,7 +543,7 @@ class RedisFuncFragment(object):
             line = 'for %s=%s do' % (node.target.id, for_list)
         else:
             line = 'for _, %s in ipairs(%s) do' % \
-                    (node.target.id, for_list)
+                   (node.target.id, for_list)
 
         code.append(LuaLine(line, node, indent))
 
@@ -663,7 +669,7 @@ class RedisFuncFragment(object):
         # Here we check the __DICT property of the object to see if
         # it is not a dictionary in which case we add 1 to the index
         line = '%s[(%s.__DICT) and (%s) or (%s + 1)]' % \
-                (expr, expr, subs, subs)
+               (expr, expr, subs, subs)
 
         code.append(LuaLine(line, node, indent))
 
@@ -738,8 +744,8 @@ class RedisFuncFragment(object):
 
             # Dump the helper function code into a local variable
             helper_functions += 'self.%s = function(%s)\n%s\nend\n' % \
-                    (method_name[1],
-                     ', '.join(wrapped.arg_names), wrapped.body)
+                                (method_name[1],
+                                 ', '.join(wrapped.arg_names), wrapped.body)
 
         for i, name in enumerate(self.in_exprs[start_arg:]):
             # Perform the lookup for class variables
@@ -758,14 +764,14 @@ class RedisFuncFragment(object):
                 arg = args[i + start_arg]
 
             arg_unpacking += '%s = %s(ARGV[%d])\n' % \
-                    (definition, self.arg_conversion(arg),
-                     i + start_arg + 1)
+                             (definition, self.arg_conversion(arg),
+                              i + start_arg + 1)
 
             # Track if this is a dictionary so we know if we
             # need to add one to indexes into the Lua table
             if isinstance(arg, dict):
                 arg_unpacking += '%s.__DICT = true\n' % \
-                        self.in_exprs[i + start_arg]
+                                 self.in_exprs[i + start_arg]
 
         # Expand any necessary helper arguments
         if new_args > 0:
@@ -778,7 +784,6 @@ class RedisFuncFragment(object):
 
         return helper_unpacking + arg_unpacking + helper_functions
 
-
     def lua_code(self, client, args, method_self=None):
         """Produce the lua code for this script fragment"""
 
@@ -787,7 +792,7 @@ class RedisFuncFragment(object):
         # XXX This is dumb but lets us avoid most of the pipelining
         #     overhead if we're sure that it isn't needed
         pipeline_code = PIPELINED_CODE if '__PIPE_GET' in body \
-                                       else UNPIPELINED_CODE
+            else UNPIPELINED_CODE
 
         arg_unpacking = self.unpack_args(args, 0, self.helpers, method_self)
         return LUA_HEADER + pipeline_code + arg_unpacking + body
@@ -836,7 +841,7 @@ class RedisFuncFragment(object):
             # instruction as "return" is not valid in the current context
             script_call = '__RETVAL = ScriptRegistry.run_script' \
                           '(%s, "%s", [%s])\n' \
-                    % (client_arg, self.script_id, ', '.join(arg_exprs))
+                          % (client_arg, self.script_id, ', '.join(arg_exprs))
             script_call += 'if __RETVAL["__return"]:\n' \
                            '    __RETVAL["__value"]\n' \
                            '    __RETURN_HERE__\n' \
@@ -873,7 +878,7 @@ class RedisFuncFragment(object):
 
             # Patch in the return instruction
             new_code.code[return_loc-1:return_loc+2] = \
-                    [(byteplay.RETURN_VALUE, None)]
+                [(byteplay.RETURN_VALUE, None)]
 
             # Copy the line number so the first line matches
             code = byteplay.Code.from_code(self.taint.func.func_code)
@@ -904,14 +909,14 @@ class RedisFuncFragment(object):
 
         return self.taint.func(*orig_args)
 
+
 def redis_server(method=None, redis_objs=None, minlineno=None, maxlineno=None):
     """Create a decorator which converts a function to run on the server"""
 
     def decorator(method):
         taint = sully.TaintAnalysis(method)
         fragment = RedisFuncFragment(taint, redis_objs=redis_objs,
-                                            minlineno=minlineno,
-                                            maxlineno=maxlineno)
+                                     minlineno=minlineno, maxlineno=maxlineno)
         return functools.update_wrapper(fragment, method)
 
     return decorator(method) if method else decorator
