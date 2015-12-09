@@ -375,9 +375,16 @@ class RedisFuncFragment(object):
         op2 = self.process_node(node.right).code
 
         if isinstance(node.op, ast.Add):
+            int_add = False
+            for op in (node.left, node.right):
+                if isinstance(op, ast.Call) and isinstance(op.func, ast.Name) \
+                        and op.func.id in ('int', 'float'):
+                    int_add = True
+                    break
+
             # Guess if either operand is a number
             # XXX This will fail if we add two numerical variables
-            if op1.isdigit() or op2.isdigit():
+            if int_add or op1.isdigit() or op2.isdigit():
                 op = ' + '
             else:
                 op = ' .. '
