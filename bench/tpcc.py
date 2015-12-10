@@ -232,7 +232,6 @@ def bench(partition=False):
                                                           SCALE_FACTOR)
 
     # Ensure we have orders to process
-    scaleParameters.newOrdersPerDistrict = ITERATIONS
     print(scaleParameters)
 
     nurand = rand.setNURand(nurand.makeForLoad())
