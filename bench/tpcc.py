@@ -67,7 +67,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
 
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if id_set[cursor] == None :
+            if not id_set[cursor]:
                 rdr.get('NULL_VALUE')
             else:
                 rdr.hget('NEW_ORDER.' + str(id_set[cursor]), 'NO_O_ID')
@@ -81,7 +81,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         #-----------------------
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None :
+            if not no_o_id[cursor]:
                 order_key.insert(cursor, 'NO_KEY')
             else:
                 order_key.insert(
@@ -93,7 +93,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
 
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None or c_id[cursor] == None:
+            if not no_o_id[cursor] or not c_id[cursor]:
                 si_key = 'NO_KEY'
             else:
                 si_key = self.safeKey([no_o_id[cursor], w_id, d_id])
@@ -108,7 +108,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         #-----------------------------
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None or c_id[cursor] == None:
+            if not no_o_id[cursor] or not c_id[cursor]:
                 rdr.get('NULL_VALUE')
             else:
                 for i in ol_ids[cursor]:
@@ -124,7 +124,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
             if counter > ol_counts[index]:
                 index += 1
                 counter = 0
-            elif ol_amount != None :
+            elif ol_amount:
                 ol_total[index] += float(ol_amount)
 
         if self.debug['delivery'] == 'Verbose':
@@ -132,7 +132,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
 
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None or c_id[cursor] == None:
+            if not no_o_id[cursor] or not c_id[cursor]:
                 ## No orders for this district: skip it.
                 ## Note: This must be reported if > 1%
                 continue
@@ -179,7 +179,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         #-----------------------
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None or c_id[cursor] == None :
+            if not no_o_id[cursor] or not c_id[cursor]:
                 rdr.get('NULL_VALUE')
                 customer_key.insert(cursor, 'NO_KEY')
             else:
@@ -192,7 +192,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
 
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1):
             cursor = d_id - 1
-            if no_o_id[cursor] == None or c_id[cursor] == None :
+            if not no_o_id[cursor] or not c_id[cursor]:
                 continue
             else:
                 new_balance = float(old_balance[cursor]) + \
