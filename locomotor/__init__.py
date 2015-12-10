@@ -753,12 +753,14 @@ class RedisFuncFragment(object):
         elif isinstance(node.op, ast.UAdd):
             # XXX We're assuming that unary addition does nothing
             op = ''
+        elif isinstance(node.op, ast.Not):
+            op = 'not '
         else:
             # XXX Some unhandled operator
             print(node.op)
             raise Exception()
 
-        line = op + self.process_node(node.operand).code
+        line = '(%s%s)' % (op, self.process_node(node.operand).code)
         code.append(LuaLine(line, node, indent))
 
     def arg_conversion(self, arg):
