@@ -878,8 +878,17 @@ class RedisFuncFragment(object):
         return inner
 
     def __call__(self, *args):
-        # Save the original arguments so we can use them when calling later
-        orig_args = copy.copy(args)
+        # Register this script if needed
+        if self.script_id is None:
+            orig_args = copy.copy(args)
+            self.register_script(*args)
+        else:
+            orig_args = args
+
+        return self.taint.func(*orig_args)
+
+    def register_script(self, *args):
+        """Register the script with the client and patch the function code"""
 
         # Check if this is a method and pull the correct arguments
         if self.method:
@@ -899,94 +908,90 @@ class RedisFuncFragment(object):
                 args.remove(arg)
         client = clients[0]
 
-        # Register this script if needed
-        if self.script_id is None:
-            lua_code = self.lua_code(client, args, method_self)
-            self.script_id = ScriptRegistry.register_script(client, lua_code)
+        lua_code = self.lua_code(client, args, method_self)
+        self.script_id = ScriptRegistry.register_script(client, lua_code)
 
-            # Get all the arguments to go to the function
-            arg_exprs = copy.copy(self.arg_names)
-            for attr in self.in_exprs:
-                if isinstance(attr, tuple):
-                    arg_exprs.append('.'.join(attr))
+        # Get all the arguments to go to the function
+        arg_exprs = copy.copy(self.arg_names)
+        for attr in self.in_exprs:
+            if isinstance(attr, tuple):
+                arg_exprs.append('.'.join(attr))
 
-            # XXX For now, there can be only one
-            client_arg = self.redis_objs[0].id
+        # XXX For now, there can be only one
+        client_arg = self.redis_objs[0].id
 
-            # Compile code to call our script
-            # We first store the return value of the script in a temporary
-            # variable and then check if we're supposed to return
-            # __RETURN_HERE__ is a placeholder that we can insert the return
-            # instruction as "return" is not valid in the current context
-            script_call = '__RETVAL = ScriptRegistry.run_script' \
-                          '(%s, "%s", [%s])\n' \
-                          % (client_arg, self.script_id, ', '.join(arg_exprs))
-            script_call += 'if __RETVAL["__return"]:\n' \
-                           '    __RETVAL["__value"]\n' \
-                           '    __RETURN_HERE__\n' \
-                           'for __var, __value in __RETVAL.iteritems():\n' \
-                           '    if not __var.startswith("__"):\n' \
-                           '        locals()[__var] == __value'
+        # Compile code to call our script
+        # We first store the return value of the script in a temporary
+        # variable and then check if we're supposed to return
+        # __RETURN_HERE__ is a placeholder that we can insert the return
+        # instruction as "return" is not valid in the current context
+        script_call = '__RETVAL = ScriptRegistry.run_script' \
+                      '(%s, "%s", [%s])\n' \
+                      % (client_arg, self.script_id, ', '.join(arg_exprs))
+        script_call += 'if __RETVAL["__return"]:\n' \
+                       '    __RETVAL["__value"]\n' \
+                       '    __RETURN_HERE__\n' \
+                       'for __var, __value in __RETVAL.iteritems():\n' \
+                       '    if not __var.startswith("__"):\n' \
+                       '        locals()[__var] == __value'
 
-            script_call = compile(script_call, '<string>', 'exec')
+        script_call = compile(script_call, '<string>', 'exec')
 
-            # Replace LOAD_NAME with LOAD_FAST for all function argument
-            # And store where we need to splice in the return instruction
-            new_code = byteplay.Code.from_code(script_call)
-            linenos = []
-            for i, instr in enumerate(new_code.code):
-                if instr[0] == byteplay.LOAD_NAME and \
-                        instr[1] in self.taint.func.func_code.co_varnames:
-                    new_code.code[i] = (byteplay.LOAD_FAST, instr[1])
+        # Replace LOAD_NAME with LOAD_FAST for all function argument
+        # And store where we need to splice in the return instruction
+        new_code = byteplay.Code.from_code(script_call)
+        linenos = []
+        for i, instr in enumerate(new_code.code):
+            if instr[0] == byteplay.LOAD_NAME and \
+                    instr[1] in self.taint.func.func_code.co_varnames:
+                new_code.code[i] = (byteplay.LOAD_FAST, instr[1])
 
-                # Find where our return instruction should go
-                if instr[0] == byteplay.LOAD_NAME \
-                        and instr[1] == '__RETURN_HERE__':
-                    return_loc = i - len(linenos)
+            # Find where our return instruction should go
+            if instr[0] == byteplay.LOAD_NAME \
+                    and instr[1] == '__RETURN_HERE__':
+                return_loc = i - len(linenos)
 
-                # Track where line numbers appear so we can remove them
-                # to retain the line numbers from the original function
-                if instr[0] == byteplay.SetLineno:
-                    linenos.append(i)
+            # Track where line numbers appear so we can remove them
+            # to retain the line numbers from the original function
+            if instr[0] == byteplay.SetLineno:
+                linenos.append(i)
 
-            # Remove all line number markers
-            removed_lines = 0
-            for lineno in linenos:
-                del new_code.code[lineno - removed_lines]
-                removed_lines += 1
+        # Remove all line number markers
+        removed_lines = 0
+        for lineno in linenos:
+            del new_code.code[lineno - removed_lines]
+            removed_lines += 1
 
-            # Patch in the return instruction
-            new_code.code[return_loc-1:return_loc+2] = \
-                [(byteplay.RETURN_VALUE, None)]
+        # Patch in the return instruction
+        new_code.code[return_loc-1:return_loc+2] = \
+            [(byteplay.RETURN_VALUE, None)]
 
-            # Copy the line number so the first line matches
-            code = byteplay.Code.from_code(self.taint.func.func_code)
+        # Copy the line number so the first line matches
+        code = byteplay.Code.from_code(self.taint.func.func_code)
 
-            # Find the start and line lines where we need to patch in
-            firstline = code.code[0][1] - 2
-            startline = endline = None
-            for i, instr in enumerate(code.code):
-                if startline is None and instr[0] == byteplay.SetLineno and \
-                        (instr[1] - firstline) >= self.minlineno:
-                    startline = i + 1
-                if instr[0] == byteplay.SetLineno and \
-                        (instr[1] - firstline) <= self.maxlineno:
-                    endline = i - 1
+        # Find the start and line lines where we need to patch in
+        firstline = code.code[0][1] - 2
+        startline = endline = None
+        for i, instr in enumerate(code.code):
+            if startline is None and instr[0] == byteplay.SetLineno and \
+                    (instr[1] - firstline) >= self.minlineno:
+                startline = i + 1
+            if instr[0] == byteplay.SetLineno and \
+                    (instr[1] - firstline) <= self.maxlineno:
+                endline = i - 1
 
-                # If we haven't found the end, keep advancing
-                if instr[0] == byteplay.SetLineno and \
-                        (instr[1] - firstline) <= self.maxlineno:
-                    endline = i
+            # If we haven't found the end, keep advancing
+            if instr[0] == byteplay.SetLineno and \
+                    (instr[1] - firstline) <= self.maxlineno:
+                endline = i
 
-            # Patch this into the original function
-            # We skip the first line since this is an unwanted SetLineno
-            code.code[startline:endline] = new_code.code
-            self.taint.func.func_code = code.to_code()
+        # Patch this into the original function
+        # We skip the first line since this is an unwanted SetLineno
+        code.code[startline:endline] = new_code.code
+        self.taint.func.func_code = code.to_code()
 
-            # Make the ScriptRegistry global available
-            self.taint.func.func_globals['ScriptRegistry'] = ScriptRegistry
-
-        return self.taint.func(*orig_args)
+        # Make the ScriptRegistry global available
+        self.taint.func.func_globals['ScriptRegistry'] = ScriptRegistry
 
 
 def redis_server(method=None, redis_objs=None, minlineno=None, maxlineno=None):
