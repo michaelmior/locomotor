@@ -193,6 +193,14 @@ class ScriptRegistry(object):
         return retval
 
 
+class UntranslatableCodeException(Exception):
+    """Exception raised when code can't be translated"""
+
+    def __init__(self, node):
+        self.node = node
+        message = ast.dump(node)
+        super(UntranslatableCodeException, self).__init__(message)
+
 class RedisFuncFragment(object):
     def __init__(self, taint, minlineno=None, maxlineno=None,
                  redis_objs=None, helper=False):
@@ -317,9 +325,7 @@ class RedisFuncFragment(object):
             getattr(self, 'process_' + cls)(node, code, indent)
         except KeyError:
             # XXX This type of node is not handled
-            print(ast.dump(node))
-            print(node._fields)
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         return LuaBlock(code)
 
@@ -345,7 +351,7 @@ class RedisFuncFragment(object):
         # XXX Assume uppercase values are constants
         if obj != 'self' and not node.attr.isupper():
             # XXX We're probably doing some external stuff we can't handle
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         if obj == 'self':
             # Access the Lua table corresponding to self
@@ -365,8 +371,7 @@ class RedisFuncFragment(object):
             line = '%s = %s + %s' % (target, target, value)
         else:
             # XXX Some unhandled operator
-            print(node.op)
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         code.append(LuaLine(line, node, indent))
 
@@ -402,8 +407,7 @@ class RedisFuncFragment(object):
             op = ' ^ '
         else:
             # XXX Some unhandled operator
-            print(node.op)
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         line = op1 + op + op2
         code.append(LuaLine(line, node, indent))
@@ -419,8 +423,7 @@ class RedisFuncFragment(object):
             op = ' and '
         else:
             # XXX Some unhandled operator
-            print(node.op)
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         code.append(LuaLine(op.join(values), node, indent))
 
@@ -429,7 +432,7 @@ class RedisFuncFragment(object):
 
         # We don't support positional or keyword arguments
         if node.starargs or node.kwargs:
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         raw_args = [self.process_node(n) for n in node.args]
         args = ', '.join(arg.code for arg in raw_args)
@@ -453,8 +456,7 @@ class RedisFuncFragment(object):
                 line = '#' + args
             else:
                 # XXX We don't know how to handle this function
-                print(ast.dump(node.func))
-                raise Exception()
+                raise UntranslatableCodeException(node)
 
         # XXX We assume now that the function being called is an Attribute
 
@@ -508,8 +510,7 @@ class RedisFuncFragment(object):
             line = '__PIPE_ADD(\'%s\', %s)' % (expr, call)
         else:
             # XXX Something we can't handle
-            print(ast.dump(node))
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         code.append(LuaLine(line, node, indent))
 
@@ -518,7 +519,7 @@ class RedisFuncFragment(object):
 
         # XXX We only handle a single comparison
         if len(node.ops) != 1 or len(node.comparators) != 1:
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         lhs = self.process_node(node.left).code
 
@@ -536,8 +537,7 @@ class RedisFuncFragment(object):
             op = ' <= '
         else:
             # XXX We don't handle this type of comparison
-            print(node.ops[0])
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         rhs = self.process_node(node.comparators[0]).code
         line = '%s %s %s' % (lhs, op, rhs)
@@ -694,7 +694,7 @@ class RedisFuncFragment(object):
 
         # We only handle prints to stdout
         if node.dest is not None:
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         # Add a log statement for each print
         for value in node.values:
@@ -757,8 +757,7 @@ class RedisFuncFragment(object):
             op = 'not '
         else:
             # XXX Some unhandled operator
-            print(node.op)
-            raise Exception()
+            raise UntranslatableCodeException(node)
 
         line = '(%s%s)' % (op, self.process_node(node.operand).code)
         code.append(LuaLine(line, node, indent))
