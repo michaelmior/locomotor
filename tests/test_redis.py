@@ -2,6 +2,7 @@ import ast
 import datetime
 import imp
 import pytest
+import time
 
 from locomotor import redis_server
 
@@ -443,3 +444,10 @@ def test_multiple_objs(redis):
         return client2.get('foo')
 
     assert multiple_objs(redis, redis, 'bar') == 'bar'
+
+def test_time(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def lua_time(client):
+        return time.time()
+
+    assert abs(lua_time(redis) - time.time()) < 1

@@ -460,6 +460,11 @@ class RedisFuncFragment(object):
 
         # XXX We assume now that the function being called is an Attribute
 
+        # Get the current time for time.time()
+        elif node.func.value.id == node.func.attr == 'time':
+            line = '((function() local __TIME = redis.call("TIME"); ' \
+                   'return __TIME[1] + (__TIME[2] / 1000000) end)())'
+
         # Perform string replacement
         elif node.func.attr == 'replace':
             line = '((function() local __TEMP, _; ' \
@@ -789,7 +794,8 @@ class RedisFuncFragment(object):
             # We can skip Redis calls or calls to what we assume
             # are builtin functions
             if method_name[0] in map(lambda x: x.id, self.redis_objs) or \
-               method_name[1] in FUNC_BUILTINS:
+               method_name[1] in FUNC_BUILTINS or \
+               method_name == ('time', 'time'):
                 continue
 
             # Anything else which is not a call on self is an error
