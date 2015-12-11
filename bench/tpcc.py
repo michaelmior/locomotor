@@ -26,8 +26,8 @@ class PartitionedDriver(redisdriver.RedisDriver):
 
         # Setup Redis pipelining
         node = self.shard(params["w_id"])
-        # rdr = self.r_pipes[node]
-        rdr = wtr = self.w_pipes[node]
+        rdr = self.r_pipes[node]
+        wtr = self.w_pipes[node]
 
         self._doDelivery(rdr, wtr, params)
 

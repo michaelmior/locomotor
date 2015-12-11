@@ -153,7 +153,7 @@ class ScriptRegistry(object):
     def register_script(cls, client, lua_code):
         script = client.register_script(lua_code)
         script_id = hashlib.md5(lua_code).hexdigest()
-        cls.SCRIPTS[(client, script_id)] = script
+        cls.SCRIPTS[script_id] = script
         return script_id
 
     # Execute a pre-registered script
@@ -165,7 +165,7 @@ class ScriptRegistry(object):
                 args[i] = msgpack.packb(args[i], default=encode_msgpack)
 
         # Get the registered script
-        script = cls.SCRIPTS[(client, script_id)]
+        script = cls.SCRIPTS[script_id]
 
         # Ensure the script is loaded for pipelining
         # XXX This makes assumptions on the client library
@@ -174,7 +174,8 @@ class ScriptRegistry(object):
         else:
             cmd_exec = client.execute_command
 
-        if not script.sha:
+        if not script.sha or not cmd_exec('SCRIPT', 'EXISTS', script.sha,
+                                          **{'parse': 'EXISTS'})[0]:
             script.sha = cmd_exec('SCRIPT', 'LOAD', script.script,
                                   **{'parse': 'LOAD'})
 
