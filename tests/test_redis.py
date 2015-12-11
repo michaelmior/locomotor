@@ -451,3 +451,24 @@ def test_time(redis):
         return time.time()
 
     assert abs(lua_time(redis) - time.time()) < 1
+
+def test_array_not(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def array_not(client):
+        return not []
+
+    assert array_not(redis)
+
+def test_string_not(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def string_not(client):
+        return not ''
+
+    assert string_not(redis)
+
+def test_number_not(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def number_not(client):
+        return not 0
+
+    assert number_not(redis)

@@ -753,18 +753,22 @@ class RedisFuncFragment(object):
     def process_UnaryOp(self, node, code, indent):
         """Generate code for a unary operator"""
 
+        operand = self.process_node(node.operand).code
+        line = None
+
         if isinstance(node.op, ast.USub):
             op = '-'
         elif isinstance(node.op, ast.UAdd):
             # XXX We're assuming that unary addition does nothing
             op = ''
         elif isinstance(node.op, ast.Not):
-            op = 'not '
+            line = '(not __TRUE(%s))' % operand
         else:
             # XXX Some unhandled operator
             raise UntranslatableCodeException(node)
 
-        line = '(%s%s)' % (op, self.process_node(node.operand).code)
+        if not line:
+            line = '(%s%s)' % (op, self.process_node(node.operand).code)
         code.append(LuaLine(line, node, indent))
 
     def arg_conversion(self, arg):
