@@ -472,3 +472,21 @@ def test_number_not(redis):
         return not 0
 
     assert number_not(redis)
+
+def test_assign_array(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def assign_array(client):
+        x = [1, 2, 3]
+        x[0] = 4
+        return x[0]
+
+    assert assign_array(redis) == 4
+
+def test_assign_dict(redis):
+    @redis_server(redis_objs=[ast.Name(id='client', ctx=ast.Load())])
+    def assign_dict(client):
+        x = {'a': 1}
+        x['a'] = 2
+        return x['a']
+
+    assert assign_dict(redis) == 2

@@ -334,8 +334,17 @@ class RedisFuncFragment(object):
         value = self.process_node(node.value, indent).code
 
         for var in node.targets:
-            names = set([var.id])
-            line = '%s = %s;' % (var.id, value)
+            if isinstance(var, ast.Name):
+                name = var.id
+            elif isinstance(var, (ast.Attribute, ast.Subscript)) and \
+                    isinstance(var.value, ast.Name):
+                name = var.value.id
+            else:
+                raise UntranslatableCodeException(node)
+
+            var = self.process_node(var).code
+            names = set([name])
+            line = '%s = %s;' % (var, value)
             code.append(LuaLine(line, node, indent, names))
 
         if LUA_DEBUG:
