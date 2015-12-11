@@ -20,3 +20,29 @@ local __TRUE = function(expr)
       return true
   end
 end
+
+local __OR = function(...)
+    local __VAL = nil
+    for i, v in ipairs(arg) do
+        if __TRUE(v) then
+            return v
+        else
+            __VAL = v
+        end
+    end
+
+    return __VAL
+end
+
+local __AND = function(...)
+    local __VAL = nil
+    for i, v in ipairs(arg) do
+        if not __TRUE(v) then
+            return v
+        else
+            __VAL = v
+        end
+    end
+
+    return __VAL
+end

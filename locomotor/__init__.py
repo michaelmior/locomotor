@@ -418,14 +418,15 @@ class RedisFuncFragment(object):
         values = ['(' + self.process_node(n).code + ')' for n in node.values]
 
         if isinstance(node.op, ast.Or):
-            op = ' or '
+            op = '__OR'
         elif isinstance(node.op, ast.And):
-            op = ' and '
+            op = '__AND'
         else:
             # XXX Some unhandled operator
             raise UntranslatableCodeException(node)
 
-        code.append(LuaLine(op.join(values), node, indent))
+        line = '%s(%s)' % (op, ', '.join(values))
+        code.append(LuaLine(line, node, indent))
 
     def process_Call(self, node, code, indent):
         """Generate code for a function call"""
