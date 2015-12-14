@@ -328,6 +328,12 @@ local generateDeliveryParams = function()
   return {w_id=w_id, o_carrier_id= o_carrier_id, ol_delivery_d= ol_delivery_d}
 end
 
+require 'chronos'
+local start = chronos.nanotime()
+
 for i=1,10000 do
     tpcc({}, {cmsgpack.pack(generateDeliveryParams()), cmsgpack.pack({delivery="None"}), ":"})
 end
+
+local stop = chronos.nanotime()
+print(("Completed in %s seconds"):format(stop - start))
