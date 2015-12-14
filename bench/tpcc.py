@@ -1,3 +1,4 @@
+import argparse
 import sys
 import time
 
@@ -219,7 +220,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         return result
     # End doDelivery()
 
-def bench(partition=False):
+def bench(partition=False, execute=True):
     global nurand
 
     # Construct a Redis driver object
@@ -252,16 +253,25 @@ def bench(partition=False):
     l.execute()
     driver.loadFinish()
 
-    # Run a bunch of doDelivery transactions
-    driver.executeStart()
-    start = time.time()
-    for i in range (ITERATIONS):
-        params = e.generateDeliveryParams()
-        driver.doDelivery(params)
-    end = time.time()
-    driver.executeFinish()
+    if execute:
+        # Run a bunch of doDelivery transactions
+        driver.executeStart()
+        start = time.time()
+        for i in range (ITERATIONS):
+            params = e.generateDeliveryParams()
+            driver.doDelivery(params)
+        end = time.time()
+        driver.executeFinish()
 
-    print(end - start)
+        print(end - start)
 
 if __name__ == '__main__':
-    bench(len(sys.argv) > 1 and sys.argv[1] == 'partition')
+    parser = argparse.ArgumentParser(description='Python/Redis TPC-C benchmark')
+
+    parser.add_argument('--no-execute', dest='execute', action='store_false',
+                        default=True,
+                        help='skip executing and only load the data')
+    parser.add_argument('partition', nargs='?', default='')
+
+    args = parser.parse_args()
+    bench(args.partition == 'partition', execute=args.execute)
