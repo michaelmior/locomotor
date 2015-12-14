@@ -13,8 +13,6 @@ from pytpcc.runtime import *
 from pytpcc import constants
 
 NUM_WAREHOUSES = 4
-SCALE_FACTOR = 50
-ITERATIONS = 10000
 
 class PartitionedDriver(redisdriver.RedisDriver):
     KEY_SEPARATOR = ':'
@@ -220,7 +218,8 @@ class PartitionedDriver(redisdriver.RedisDriver):
         return result
     # End doDelivery()
 
-def bench(host='127.0.0.1', port=6379, partition=False, execute=True):
+def bench(host='127.0.0.1', port=6379, partition=False, execute=True,
+          scale_factor=50, iterations=10000):
     global nurand
 
     # Construct a Redis driver object
@@ -238,7 +237,7 @@ def bench(host='127.0.0.1', port=6379, partition=False, execute=True):
 
     # Initialize the executor
     scaleParameters = scaleparameters.makeWithScaleFactor(NUM_WAREHOUSES,
-                                                          SCALE_FACTOR)
+                                                          scale_factor)
 
     # Ensure we have orders to process
     print(scaleParameters)
@@ -258,7 +257,7 @@ def bench(host='127.0.0.1', port=6379, partition=False, execute=True):
         # Run a bunch of doDelivery transactions
         driver.executeStart()
         start = time.time()
-        for i in range (ITERATIONS):
+        for i in range(iterations):
             params = e.generateDeliveryParams()
             driver.doDelivery(params)
         end = time.time()
@@ -272,6 +271,11 @@ if __name__ == '__main__':
     parser.add_argument('--no-execute', dest='execute', action='store_false',
                         default=True,
                         help='skip executing and only load the data')
+    parser.add_argument('--scale-factor', '-f', dest='scale_factor', type=int,
+                        action='store', default=50, help='TPC-C scale factor')
+    parser.add_argument('--iterations', '-i', dest='iterations', type=int,
+                        action='store', default=10000,
+                        help='number of executions to measure')
     parser.add_argument('--host', dest='host', action='store',
                         default='127.0.0.1',
                         help='IP of the Redis server to use')
@@ -281,4 +285,5 @@ if __name__ == '__main__':
     parser.add_argument('partition', nargs='?', default='')
 
     args = parser.parse_args()
-    bench(args.host, args.port, args.partition == 'partition', args.execute)
+    bench(args.host, args.port, args.partition == 'partition', args.execute,
+          args.scale_factor, args.iterations)
