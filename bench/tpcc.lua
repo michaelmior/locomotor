@@ -6,10 +6,6 @@ local port = 6379
  
 client = redis.connect(host, port)
 
-redis.call = function(cmd, ...) 
-  return assert(loadstring('return client:'.. string.lower(cmd) ..'(...)'))(...)
-end
-
 -- redis.replicate_commands()
 local __RETVAL = function(value, retval)
   local __RESULT = {}
@@ -125,7 +121,7 @@ local tpcc = function(KEYS, ARGV)
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ~=  'None' then
     redis.log(redis.LOG_DEBUG, 'TXN DELIVERY STARTING ------------------'
   )
-    tt = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+    tt = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
   end
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
     t0 = tt;
@@ -151,7 +147,7 @@ local tpcc = function(KEYS, ARGV)
     repeat
       cursor = d_id - 1;
       index_key = self.safeKey({d_id, w_id});
-      __PIPE_ADD('rdr', redis.call('srandmember', 'NEW_ORDER.INDEXES.GETNEWORDER.' .. index_key))
+      __PIPE_ADD('rdr', client:srandmember('NEW_ORDER.INDEXES.GETNEWORDER.' .. index_key))
     until true
   end
   id_set = __PIPE_GET('rdr');
@@ -159,9 +155,9 @@ local tpcc = function(KEYS, ARGV)
     repeat
       cursor = d_id - 1;
       if (not __TRUE(id_set[(id_set.__DICT) and (cursor) or (cursor + 1)])) then
-        __PIPE_ADD('rdr', redis.call('get', 'NULL_VALUE'))
+        __PIPE_ADD('rdr', client:get('NULL_VALUE'))
       else
-        __PIPE_ADD('rdr', redis.call('hget', 'NEW_ORDER.' .. tostring(id_set[(id_set.__DICT) and (cursor) or (cursor + 1)]), 'NO_O_ID'))
+        __PIPE_ADD('rdr', client:hget('NEW_ORDER.' .. tostring(id_set[(id_set.__DICT) and (cursor) or (cursor + 1)]), 'NO_O_ID'))
       end
     until true
   end
@@ -169,9 +165,9 @@ local tpcc = function(KEYS, ARGV)
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
     redis.log(redis.LOG_DEBUG, 'New Order Query: '
   )
-    redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+    redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
-    t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+    t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
   end
   for d_id=1, 10 + 1 - 1, 1 do
     repeat
@@ -181,7 +177,7 @@ local tpcc = function(KEYS, ARGV)
       else
         order_key[(order_key.__DICT) and (cursor) or (cursor + 1)] = self.safeKey({w_id, d_id, no_o_id[(no_o_id.__DICT) and (0) or (0 + 1)]});
       end
-      __PIPE_ADD('rdr', redis.call('hget', 'ORDERS.' .. order_key[(order_key.__DICT) and (cursor) or (cursor + 1)], 'O_C_ID'))
+      __PIPE_ADD('rdr', client:hget('ORDERS.' .. order_key[(order_key.__DICT) and (cursor) or (cursor + 1)], 'O_C_ID'))
     until true
   end
   c_id = __PIPE_GET('rdr');
@@ -193,26 +189,26 @@ local tpcc = function(KEYS, ARGV)
       else
         si_key = self.safeKey({no_o_id[(no_o_id.__DICT) and (cursor) or (cursor + 1)], d_id, w_id});
       end
-      __PIPE_ADD('rdr', redis.call('smembers', 'ORDER_LINE.INDEXES.SUMOLAMOUNT.' .. si_key))
+      __PIPE_ADD('rdr', client:smembers('ORDER_LINE.INDEXES.SUMOLAMOUNT.' .. si_key))
     until true
   end
   ol_ids = __PIPE_GET('rdr');
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
     redis.log(redis.LOG_DEBUG, 'Get Customer ID Query:'
   )
-    redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+    redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
-    t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+    t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
   end
   for d_id=1, 10 + 1 - 1, 1 do
     repeat
       cursor = d_id - 1;
       if __OR(((not __TRUE(no_o_id[(no_o_id.__DICT) and (cursor) or (cursor + 1)]))), ((not __TRUE(c_id[(c_id.__DICT) and (cursor) or (cursor + 1)])))) then
-        __PIPE_ADD('rdr', redis.call('get', 'NULL_VALUE'))
+        __PIPE_ADD('rdr', client:get('NULL_VALUE'))
       else
         for _, i in ipairs(ol_ids[(ol_ids.__DICT) and (cursor) or (cursor + 1)]) do
           repeat
-            __PIPE_ADD('rdr', redis.call('hget', 'ORDER_LINE.' .. tostring(i), 'OL_AMOUNT'))
+            __PIPE_ADD('rdr', client:hget('ORDER_LINE.' .. tostring(i), 'OL_AMOUNT'))
             ol_counts[(ol_counts.__DICT) and (cursor) or (cursor + 1)] = ol_counts[(ol_counts.__DICT) and (cursor) or (cursor + 1)] + 1
           until true
         end
@@ -238,9 +234,9 @@ local tpcc = function(KEYS, ARGV)
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
     redis.log(redis.LOG_DEBUG, 'Sum Order Line Query:'
   )
-    redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+    redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
-    t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+    t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
   end
   for d_id=1, 10 + 1 - 1, 1 do
     repeat
@@ -250,34 +246,34 @@ local tpcc = function(KEYS, ARGV)
       end
       no_key = self.safeKey({d_id, w_id, no_o_id[(no_o_id.__DICT) and (cursor) or (cursor + 1)]});
       no_si_key = self.safeKey({d_id, w_id});
-      __PIPE_ADD('wtr', redis.call('del', 'NEW_ORDER.' .. no_key))
-      __PIPE_ADD('wtr', redis.call('srem', 'NEW_ORDER.IDS', no_key))
-      __PIPE_ADD('wtr', redis.call('srem', 'NEW_ORDER.INDEXES.GETNEWORDER.' .. no_si_key, no_key))
+      __PIPE_ADD('wtr', client:del('NEW_ORDER.' .. no_key))
+      __PIPE_ADD('wtr', client:srem('NEW_ORDER.IDS', no_key))
+      __PIPE_ADD('wtr', client:srem('NEW_ORDER.INDEXES.GETNEWORDER.' .. no_si_key, no_key))
       if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
         redis.log(redis.LOG_DEBUG, 'Delete New Order Query:'
   )
-        redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+        redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
-        t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+        t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
       end
-      __PIPE_ADD('wtr', redis.call('hset', 'ORDERS.' .. order_key[(order_key.__DICT) and (cursor) or (cursor + 1)], 'W_CARRIER_ID', o_carrier_id))
+      __PIPE_ADD('wtr', client:hset('ORDERS.' .. order_key[(order_key.__DICT) and (cursor) or (cursor + 1)], 'W_CARRIER_ID', o_carrier_id))
       if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
         redis.log(redis.LOG_DEBUG, 'Update Orders Query:'
   )
-        redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+        redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
-        t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+        t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
       end
       for _, i in ipairs(ol_ids[(ol_ids.__DICT) and (cursor) or (cursor + 1)]) do
         repeat
-          __PIPE_ADD('wtr', redis.call('hset', 'ORDER_LINE.' .. tostring(i), 'OL_DELIVERY_D', ol_delivery_d))
+          __PIPE_ADD('wtr', client:hset('ORDER_LINE.' .. tostring(i), 'OL_DELIVERY_D', ol_delivery_d))
           if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
             redis.log(redis.LOG_DEBUG, 'Update Order Line Query:'
   )
-            redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+            redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
           end
-          t0 = ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)());
+          t0 = ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)());
         until true
       end
     until true
@@ -287,11 +283,11 @@ local tpcc = function(KEYS, ARGV)
     repeat
       cursor = d_id - 1;
       if __OR(((not __TRUE(no_o_id[(no_o_id.__DICT) and (cursor) or (cursor + 1)]))), ((not __TRUE(c_id[(c_id.__DICT) and (cursor) or (cursor + 1)])))) then
-        __PIPE_ADD('rdr', redis.call('get', 'NULL_VALUE'))
+        __PIPE_ADD('rdr', client:get('NULL_VALUE'))
         customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)] = 'NO_KEY';
       else
         customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)] = self.safeKey({w_id, d_id, c_id[(c_id.__DICT) and (cursor) or (cursor + 1)]});
-        __PIPE_ADD('rdr', redis.call('hget', 'CUSTOMER.' .. customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)], 'C_BALANCE'))
+        __PIPE_ADD('rdr', client:hget('CUSTOMER.' .. customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)], 'C_BALANCE'))
       end
     until true
   end
@@ -303,7 +299,7 @@ local tpcc = function(KEYS, ARGV)
         if true then break end
       else
         new_balance = tonumber(old_balance[(old_balance.__DICT) and (cursor) or (cursor + 1)]) + tonumber(ol_total[(ol_total.__DICT) and (cursor) or (cursor + 1)]);
-        __PIPE_ADD('wtr', redis.call('hset', 'CUSTOMER.' .. customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)], 'C_BALANCE', new_balance))
+        __PIPE_ADD('wtr', client:hset('CUSTOMER.' .. customer_key[(customer_key.__DICT) and (cursor) or (cursor + 1)], 'C_BALANCE', new_balance))
         table.insert(result, {d_id, no_o_id[(no_o_id.__DICT) and (cursor) or (cursor + 1)]})
       end
     until true
@@ -312,13 +308,13 @@ local tpcc = function(KEYS, ARGV)
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ==  'Verbose' then
     redis.log(redis.LOG_DEBUG, 'Update Customer Query:'
   )
-    redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
+    redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - t0
   )
   end
   if self.debug[(self.debug.__DICT) and ('delivery') or ('delivery' + 1)]  ~=  'None' then
     redis.log(redis.LOG_DEBUG, 'TXN DELIVERY:'
   )
-    redis.log(redis.LOG_DEBUG, ((function() local __TIME = redis.call("TIME"); return __TIME[1] + (__TIME[2] / 1000000) end)()) - tt
+    redis.log(redis.LOG_DEBUG, ((function() local __TIME = client:time(); return __TIME[1] + (__TIME[2] / 1000000) end)()) - tt
   )
   end
   return __RETVAL(result, true)
