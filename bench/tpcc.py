@@ -220,7 +220,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         return result
     # End doDelivery()
 
-def bench(partition=False, execute=True):
+def bench(host='127.0.0.1', port=6379, partition=False, execute=True):
     global nurand
 
     # Construct a Redis driver object
@@ -232,6 +232,7 @@ def bench(partition=False, execute=True):
     defaultConfig = driver.makeDefaultConfig()
     config = dict(map(lambda x: (x, defaultConfig[x][1]),
                       defaultConfig.keys()))
+    config['databases'] = '%s:%s' % (host, port)
     config['reset'] = True
     driver.loadConfig(config)
 
@@ -271,7 +272,13 @@ if __name__ == '__main__':
     parser.add_argument('--no-execute', dest='execute', action='store_false',
                         default=True,
                         help='skip executing and only load the data')
+    parser.add_argument('--host', dest='host', action='store',
+                        default='127.0.0.1',
+                        help='IP of the Redis server to use')
+    parser.add_argument('--port', dest='port', action='store',
+                        default=6379,
+                        help='Redis server port number')
     parser.add_argument('partition', nargs='?', default='')
 
     args = parser.parse_args()
-    bench(args.partition == 'partition', execute=args.execute)
+    bench(args.host, args.port, args.partition == 'partition', args.execute)
