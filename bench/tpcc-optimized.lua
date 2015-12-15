@@ -61,52 +61,57 @@ local tpcc = function(params)
     table.insert(ol_counts, 0)
   end
 
-  id_set = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    index_key = self.safeKey({d_id, w_id});
-    table.insert(id_set, client:srandmember('NEW_ORDER.INDEXES.GETNEWORDER.' .. index_key))
-  end
-
-  no_o_id = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    if (not id_set[d_id]) then
-      table.insert(no_o_id, client:get('NULL_VALUE'))
-    else
-      table.insert(no_o_id, client:hget('NEW_ORDER.' .. tostring(id_set[d_id]), 'NO_O_ID'))
+  id_set = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      index_key = self.safeKey({d_id, w_id});
+      p:srandmember('NEW_ORDER.INDEXES.GETNEWORDER.' .. index_key)
     end
-  end
+  end)
 
-  c_id = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    if (not no_o_id[d_id]) then
-      order_key[d_id] = 'NO_KEY';
-    else
-      order_key[d_id] = self.safeKey({w_id, d_id, no_o_id[1]});
-    end
-    table.insert(c_id, client:hget('ORDERS.' .. order_key[d_id], 'O_C_ID'))
-  end
-
-  ol_ids = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
-      si_key = 'NO_KEY';
-    else
-      si_key = self.safeKey({no_o_id[d_id], d_id, w_id});
-    end
-    table.insert(ol_ids, client:smembers('ORDER_LINE.INDEXES.SUMOLAMOUNT.' .. si_key))
-  end
-
-  pipe_results = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
-      table.insert(pipe_results, client:get('NULL_VALUE'))
-    else
-      for _, i in ipairs(ol_ids[d_id]) do
-        table.insert(pipe_results, client:hget('ORDER_LINE.' .. tostring(i), 'OL_AMOUNT'))
-        ol_counts[d_id] = ol_counts[d_id] + 1
+  no_o_id = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if (not id_set[d_id]) then
+        p:get('NULL_VALUE')
+      else
+        p:hget('NEW_ORDER.' .. tostring(id_set[d_id]), 'NO_O_ID')
       end
     end
-  end
+  end)
+
+  c_id = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if (not no_o_id[d_id]) then
+        order_key[d_id] = 'NO_KEY';
+      else
+        order_key[d_id] = self.safeKey({w_id, d_id, no_o_id[1]});
+      end
+      p:hget('ORDERS.' .. order_key[d_id], 'O_C_ID')
+    end
+  end)
+
+  ol_ids = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
+        si_key = 'NO_KEY';
+      else
+        si_key = self.safeKey({no_o_id[d_id], d_id, w_id});
+      end
+      p:smembers('ORDER_LINE.INDEXES.SUMOLAMOUNT.' .. si_key)
+    end
+  end)
+
+  pipe_results = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
+        p:get('NULL_VALUE')
+      else
+        for _, i in ipairs(ol_ids[d_id]) do
+          p:hget('ORDER_LINE.' .. tostring(i), 'OL_AMOUNT')
+          ol_counts[d_id] = ol_counts[d_id] + 1
+        end
+      end
+    end
+  end)
 
   index = 0;
   counter = 0;
@@ -122,42 +127,47 @@ local tpcc = function(params)
     end
   end
 
-  for d_id=1, 10 + 1 - 1, 1 do
-    if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
-      if true then break end
+  client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
+        if true then break end
+      end
+      no_key = self.safeKey({d_id, w_id, no_o_id[d_id]});
+      no_si_key = self.safeKey({d_id, w_id});
+      p:del('NEW_ORDER.' .. no_key)
+      p:srem('NEW_ORDER.IDS', no_key)
+      p:srem('NEW_ORDER.INDEXES.GETNEWORDER.' .. no_si_key, no_key)
+      p:hset('ORDERS.' .. order_key[d_id], 'W_CARRIER_ID', o_carrier_id)
+      for _, i in ipairs(ol_ids[d_id]) do
+        p:hset('ORDER_LINE.' .. tostring(i), 'OL_DELIVERY_D', ol_delivery_d)
+        ol_counts[d_id] = ol_counts[d_id] + 1
+      end
     end
-    no_key = self.safeKey({d_id, w_id, no_o_id[d_id]});
-    no_si_key = self.safeKey({d_id, w_id});
-    client:del('NEW_ORDER.' .. no_key)
-    client:srem('NEW_ORDER.IDS', no_key)
-    client:srem('NEW_ORDER.INDEXES.GETNEWORDER.' .. no_si_key, no_key)
-    client:hset('ORDERS.' .. order_key[d_id], 'W_CARRIER_ID', o_carrier_id)
-    for _, i in ipairs(ol_ids[d_id]) do
-      client:hset('ORDER_LINE.' .. tostring(i), 'OL_DELIVERY_D', ol_delivery_d)
-      ol_counts[d_id] = ol_counts[d_id] + 1
-    end
-  end
+  end)
 
-  old_balance = {}
-  for d_id=1, 10 + 1 - 1, 1 do
-    if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
-      table.insert(old_balance, client:get('NULL_VALUE'))
-      customer_key[d_id] = 'NO_KEY';
-    else
-      customer_key[d_id] = self.safeKey({w_id, d_id, c_id[d_id]});
-      table.insert(old_balance, client:hget('CUSTOMER.' .. customer_key[d_id], 'C_BALANCE'))
+  old_balance = client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
+        p:get('NULL_VALUE')
+        customer_key[d_id] = 'NO_KEY';
+      else
+        customer_key[d_id] = self.safeKey({w_id, d_id, c_id[d_id]});
+        p:hget('CUSTOMER.' .. customer_key[d_id], 'C_BALANCE')
+      end
     end
-  end
+  end)
 
-  for d_id=1, 10 + 1 - 1, 1 do
-    if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
-      if true then break end
-    else
-      new_balance = tonumber(old_balance[d_id]) + tonumber(ol_total[d_id]);
-      client:hset('CUSTOMER.' .. customer_key[d_id], 'C_BALANCE', new_balance)
-      table.insert(result, {d_id, no_o_id[d_id]})
+  client:pipeline(function(p)
+    for d_id=1, 10 + 1 - 1, 1 do
+      if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
+        if true then break end
+      else
+        new_balance = tonumber(old_balance[d_id]) + tonumber(ol_total[d_id]);
+        p:hset('CUSTOMER.' .. customer_key[d_id], 'C_BALANCE', new_balance)
+        table.insert(result, {d_id, no_o_id[d_id]})
+      end
     end
-  end
+  end)
 
   return result
 end
