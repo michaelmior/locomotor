@@ -218,7 +218,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         return result
     # End doDelivery()
 
-def bench(host='127.0.0.1', port=6379, partition=False, execute=True,
+def bench(host='127.0.0.1', port=6379, partition=False, load=True, execute=True,
           scale_factor=50, iterations=10000):
     global nurand
 
@@ -245,13 +245,14 @@ def bench(host='127.0.0.1', port=6379, partition=False, execute=True,
     nurand = rand.setNURand(nurand.makeForLoad())
     e = executor.Executor(driver, scaleParameters, stop_on_error=True)
 
-    # Load the data
-    driver.loadStart()
-    l = loader.Loader(driver, scaleParameters,
-                      range(scaleParameters.starting_warehouse,
-                            scaleParameters.ending_warehouse+1), True)
-    l.execute()
-    driver.loadFinish()
+    if load:
+        # Load the data
+        driver.loadStart()
+        l = loader.Loader(driver, scaleParameters,
+                          range(scaleParameters.starting_warehouse,
+                                scaleParameters.ending_warehouse+1), True)
+        l.execute()
+        driver.loadFinish()
 
     if execute:
         # Run a bunch of doDelivery transactions
@@ -271,6 +272,9 @@ if __name__ == '__main__':
     parser.add_argument('--no-execute', dest='execute', action='store_false',
                         default=True,
                         help='skip executing and only load the data')
+    parser.add_argument('--skip-load', dest='load', action='store_false',
+                        default=True,
+                        help='skip loading the data and just execute')
     parser.add_argument('--scale-factor', '-f', dest='scale_factor', type=int,
                         action='store', default=50, help='TPC-C scale factor')
     parser.add_argument('--iterations', '-i', dest='iterations', type=int,
@@ -285,5 +289,6 @@ if __name__ == '__main__':
     parser.add_argument('partition', nargs='?', default='')
 
     args = parser.parse_args()
-    bench(args.host, args.port, args.partition == 'partition', args.execute,
+    bench(args.host, args.port, args.partition == 'partition',
+          args.load, args.execute,
           args.scale_factor, args.iterations)
