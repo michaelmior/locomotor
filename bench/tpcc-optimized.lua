@@ -34,10 +34,8 @@ local tpcc = function(params)
   local no_si_key;
   local ol_delivery_d;
   local index_key;
-  local tt;
   local counter;
   local ol_ids;
-  local t0;
   local old_balance;
   local ol_counts;
   local w_id;
