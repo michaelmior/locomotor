@@ -15,9 +15,10 @@ local tpcc = function(params)
     for _, k in ipairs(keys) do
       table.insert(new_keys, tostring(k))
     end
-    return ((function() local __TEMP, _; __TEMP, _ = string.gsub(((function() local __TEMP, _; __TEMP, _ = string.gsub(table.concat(new_keys, ":")
-  , '\n', ''); return __TEMP end)()), ' ', ''); return __TEMP end)())
 
+    local key
+    key, _ = string.gsub(string.gsub(table.concat(new_keys, ':'), '\n', ''), ' ', '')
+    return key
   end
 
   local c_id;
