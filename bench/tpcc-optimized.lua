@@ -3,7 +3,8 @@ local redis = require 'redis'
 local host = "127.0.0.1"
 local port = 6379
 
-client = redis.connect(host, port)
+rdr = redis.connect(host, port)
+wtr = redis.connect(host, port)
 
 -- redis.replicate_commands()
 
@@ -61,14 +62,14 @@ local tpcc = function(params)
     table.insert(ol_counts, 0)
   end
 
-  id_set = client:pipeline(function(p)
+  id_set = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       index_key = self.safeKey({d_id, w_id});
       p:srandmember('NEW_ORDER.INDEXES.GETNEWORDER.' .. index_key)
     end
   end)
 
-  no_o_id = client:pipeline(function(p)
+  no_o_id = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if (not id_set[d_id]) then
         p:get('NULL_VALUE')
@@ -78,7 +79,7 @@ local tpcc = function(params)
     end
   end)
 
-  c_id = client:pipeline(function(p)
+  c_id = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if (not no_o_id[d_id]) then
         order_key[d_id] = 'NO_KEY';
@@ -89,7 +90,7 @@ local tpcc = function(params)
     end
   end)
 
-  ol_ids = client:pipeline(function(p)
+  ol_ids = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
         si_key = 'NO_KEY';
@@ -100,7 +101,7 @@ local tpcc = function(params)
     end
   end)
 
-  pipe_results = client:pipeline(function(p)
+  pipe_results = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
         p:get('NULL_VALUE')
@@ -127,7 +128,7 @@ local tpcc = function(params)
     end
   end
 
-  client:pipeline(function(p)
+  wtr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
         if true then break end
@@ -145,7 +146,7 @@ local tpcc = function(params)
     end
   end)
 
-  old_balance = client:pipeline(function(p)
+  old_balance = rdr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
         p:get('NULL_VALUE')
@@ -157,7 +158,7 @@ local tpcc = function(params)
     end
   end)
 
-  client:pipeline(function(p)
+  wtr:pipeline(function(p)
     for d_id=1, 10 + 1 - 1, 1 do
       if ((not no_o_id[d_id])) or ((not c_id[d_id])) then
         if true then break end
