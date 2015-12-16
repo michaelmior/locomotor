@@ -255,6 +255,9 @@ def bench(host='127.0.0.1', port=6379, partition=False, load=True, execute=True,
         driver.loadFinish()
 
     if execute:
+        driver.r_pipes[0].info()
+        begin_stats = driver.r_pipes[0].execute()[0]
+
         # Run a bunch of doDelivery transactions
         driver.executeStart()
         start = time.time()
@@ -264,7 +267,10 @@ def bench(host='127.0.0.1', port=6379, partition=False, load=True, execute=True,
         end = time.time()
         driver.executeFinish()
 
-        print(end - start)
+        driver.r_pipes[0].info()
+        end_stats = driver.r_pipes[0].execute()[0]
+
+        print("Completed %s commands sending %s KB and receiving %s KB in %s seconds" % (end_stats["total_commands_processed"] - begin_stats["total_commands_processed"], (end_stats["total_net_input_bytes"] - begin_stats["total_net_input_bytes"]) / 1024.0, (end_stats["total_net_output_bytes"] - begin_stats["total_net_output_bytes"]) / 1024.0, end - start))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Python/Redis TPC-C benchmark')

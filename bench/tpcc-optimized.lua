@@ -181,7 +181,9 @@ local generateDeliveryParams = function()
   return {w_id=w_id, o_carrier_id= o_carrier_id, ol_delivery_d= ol_delivery_d}
 end
 
+
 require 'chronos'
+begin_stats = rdr:info()["stats"]
 local start = chronos.nanotime()
 
 for i=1,10000 do
@@ -189,4 +191,5 @@ for i=1,10000 do
 end
 
 local stop = chronos.nanotime()
-print(("Completed in %s seconds"):format(stop - start))
+end_stats = rdr:info()["stats"]
+print(("Completed %s commands sending %s KB and receiving %s KB in %s seconds"):format(end_stats["total_commands_processed"] - begin_stats["total_commands_processed"], (end_stats["total_net_input_bytes"] - begin_stats["total_net_input_bytes"]) / 1024, (end_stats["total_net_output_bytes"] - begin_stats["total_net_output_bytes"]) / 1024, stop - start))
