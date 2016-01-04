@@ -1,10 +1,13 @@
-local redis = require 'redis'
- 
-local host = "127.0.0.1"
-local port = 6379
+local argparse = require 'argparse'
+local parser = argparse(arg[0], 'TPCC benchmark')
+parser:option('--host', 'Redis host', '127.0.0.1')
+parser:option('-p --port', 'Redis port number', 6379)
+local args = parser:parse()
 
-rdr = redis.connect(host, port)
-wtr = redis.connect(host, port)
+local redis = require 'redis'
+
+rdr = redis.connect(args['host'], tonumber(args['port']))
+wtr = redis.connect(args['host'], tonumber(args['port']))
 
 -- redis.replicate_commands()
 
@@ -182,7 +185,7 @@ local generateDeliveryParams = function()
 end
 
 
-require 'chronos'
+local chronos = require 'chronos'
 begin_stats = rdr:info()["stats"]
 local start = chronos.nanotime()
 

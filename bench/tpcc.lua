@@ -1,10 +1,12 @@
-local cmsgpack = require 'cmsgpack'
+local argparse = require 'argparse'
+local parser = argparse(arg[0], 'TPCC benchmark')
+parser:option('--host', 'Redis host', '127.0.0.1')
+parser:option('-p --port', 'Redis port number', 6379)
+local args = parser:parse()
+
 local redis = require 'redis'
  
-local host = "127.0.0.1"
-local port = 6379
- 
-client = redis.connect(host, port)
+client = redis.connect(args['host'], tonumber(args['port']))
 
 -- redis.replicate_commands()
 local __RETVAL = function(value, retval)
@@ -328,7 +330,9 @@ local generateDeliveryParams = function()
   return {w_id=w_id, o_carrier_id= o_carrier_id, ol_delivery_d= ol_delivery_d}
 end
 
-require 'chronos'
+local cmsgpack = require 'cmsgpack'
+local chronos = require 'chronos'
+begin_stats = client:info()["stats"]
 local start = chronos.nanotime()
 
 for i=1,10000 do
@@ -336,4 +340,5 @@ for i=1,10000 do
 end
 
 local stop = chronos.nanotime()
-print(("Completed in %s seconds"):format(stop - start))
+end_stats = client:info()["stats"]
+print(("Completed %s commands sending %s KB and receiving %s KB in %s seconds"):format(end_stats["total_commands_processed"] - begin_stats["total_commands_processed"], (end_stats["total_net_input_bytes"] - begin_stats["total_net_input_bytes"]) / 1024, (end_stats["total_net_output_bytes"] - begin_stats["total_net_output_bytes"]) / 1024, stop - start))
