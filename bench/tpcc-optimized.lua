@@ -1,6 +1,6 @@
 local argparse = require 'argparse'
-local parser = argparse(arg[0], 'TPCC benchmark')
-parser:option('--host', 'Redis host', '127.0.0.1')
+local parser = argparse(arg[0], 'TPCC benchmark') :add_help '-? --help'
+parser:option('-h --host', 'Redis host', '127.0.0.1')
 parser:option('-p --port', 'Redis port number', 6379)
 local args = parser:parse()
 
