@@ -10,15 +10,17 @@ Currently some minor work is required on the Python side.
 First, you should isolate the code which you want to run as a Lua script in a single function where one of the parameters is a connection to the Redis server.
 Then simply add the annotation `@locomotor.redis_server` to the function.
 
-    from locomotor import redis_server
+```python
+from locomotor import redis_server
 
-    @redis_server(redis_objs=['redis'])
-    def get_many(redis, count):
-        values = []
-        for i in range(count):
-            values.append(redis.get('KEY' + str(i)))
+@redis_server(redis_objs=['redis'])
+def get_many(redis, count):
+    values = []
+    for i in range(count):
+        values.append(redis.get('KEY' + str(i)))
 
-    return values
+return values
+```
 
 In this case, note that the parameter identifying the Redis server object was manually specified.
 This is required if the heuristics used by Locomotor can't reliably determine how the server is accessed.
