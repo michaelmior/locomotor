@@ -1,3 +1,3 @@
 # Locomotor
 
-[![Build Status](https://magnum.travis-ci.com/michaelmior/locomotor.svg?token=rM4RuzPrnmeRRxXcrK4C&branch=master)](https://travis-ci.org/michaelmior/locomotor)
+[![Build Status](https://travis-ci.org/michaelmior/locomotor.svg?branch=master)](https://travis-ci.org/michaelmior/locomotor)
