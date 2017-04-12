@@ -207,7 +207,14 @@ class RedisFuncFragment(object):
                  redis_objs=None, helper=False):
         self.taint = taint
         if redis_objs:
-            self.redis_objs = redis_objs
+            self.redis_objs = []
+
+            for obj in redis_objs:
+                # Allow specification as bare names
+                if isinstance(obj, str):
+                    obj = ast.Name(id=obj, ctx=ast.Load())
+
+                self.redis_objs.append(obj)
         else:
             self.redis_objs = identify_redis_objs(taint.func)
 
