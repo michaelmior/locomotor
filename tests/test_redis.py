@@ -371,6 +371,17 @@ def test_continue(redis):
 
     assert cont(redis) == True
 
+def test_break(redis):
+    @redis_server(redis_objs=['client'])
+    def brk(client):
+        for i in range(10):
+            break
+            return False
+
+        return True
+
+    assert brk(redis) == True
+
 def test_pipe(redis):
     @redis_server(redis_objs=['client'])
     def pipe(client):
