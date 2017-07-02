@@ -16,7 +16,7 @@ redis==2.10.5
 requests==2.18.1
 six==1.10.0
 snowballstemmer==1.2.1
-Sphinx==1.6.2
+Sphinx==1.6.3
 sphinx-rtd-theme==0.2.4
 sphinxjp.themes.basicstrap==0.4.3
 -e git+https://github.com/michaelmior/sully.git@c49dc727b40d22f11305433bfd988f425feca248#egg=sully
