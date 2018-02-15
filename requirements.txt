@@ -4,7 +4,7 @@ Babel==2.5.3
 byteplay==0.2
 docutils==0.14
 ghp-import==0.5.5
-imagesize==0.7.1
+imagesize==1.0.0
 Jinja2==2.10
 MarkupSafe==1.0
 msgpack-python==0.5.4
