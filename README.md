@@ -1,7 +1,7 @@
 # Locomotor
 
 [![Build Status](https://travis-ci.org/michaelmior/locomotor.svg?branch=master)](https://travis-ci.org/michaelmior/locomotor)
-[![Dependency Status](https://gemnasium.com/badges/github.com/michaelmior/locomotor.svg)](https://gemnasium.com/github.com/michaelmior/locomotor)
+[![Updates](https://pyup.io/repos/github/michaelmior/locomotor/shield.svg)](https://pyup.io/repos/github/michaelmior/locomotor/)
 
 Locomotor aims to automatically translate Python code which makes requests to a [Redis](https://redis.io/) server into equivalent [Lua](https://www.lua.org/) code which is executed using the [EVAL](https://redis.io/commands/eval) command.
 This can result in significants speedups in the case where the code makes multiple requests since it avoids round trips between the server and the client.
