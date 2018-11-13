@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+
+[packages]
+byteplay = "*"
+msgpack-python = "*"
+redis = "*"
+sully = {editable = true, git = "https://github.com/michaelmior/sully.git", ref = "c49dc727b40d22f11305433bfd988f425feca248"}
+Sphinx = "*"
+sphinx_rtd_theme = "*"
+"sphinxjp.themes.basicstrap" = "*"
+ghp-import = "*"
+
+[requires]
+python_version = "2.7"

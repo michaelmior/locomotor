@@ -8,8 +8,12 @@ before_install:
   - (cd vendor/redis; make && sudo make install)
   - echo -e '\n\n\n\n\n\n' | sudo ./vendor/redis/utils/install_server.sh
 
+install:
+  - pip install pipenv
+  - pipenv install
+
 script:
-  - python setup.py test
+  - pipenv run python setup.py test
 
 after_success:
   - make -C docs html
