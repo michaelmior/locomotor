@@ -20,7 +20,13 @@ env:
 script:
   - pipenv run python setup.py test
 
-after_success:
-  - make -C docs html
-  - ghp-import -n docs/_build/html
-  - git push -fq https://$GH_TOKEN@github.com/$TRAVIS_REPO_SLUG.git gh-pages
+jobs:
+  include:
+    - stage: deploy
+      provider: script
+      on:
+        branch: master
+      script:
+        - make -C docs html
+        - ghp-import -n docs/_build/html
+        - git push -fq https://$GH_TOKEN@github.com/$TRAVIS_REPO_SLUG.git gh-pages
