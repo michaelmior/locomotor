@@ -11,6 +11,11 @@ before_install:
 install:
   - pip install pipenv
   - pipenv install
+  - if [ $LEGACY_REDIS -eq 1 ]; then pipenv run pip install redis==2.10.6; fi
+
+env:
+  - LEGACY_REDIS=0
+  - LEGACY_REDIS=1
 
 script:
   - pipenv run python setup.py test
