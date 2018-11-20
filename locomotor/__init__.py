@@ -43,6 +43,10 @@ DEBUG_LOG_CHANNEL = 'locomotor-debug'
 #     currently may have side effects but this should be fixable
 LUA_DEBUG = False
 
+#: The class used for pipelined operations
+# This was updated in v3 of the Redis Python library
+PIPELINE_CLASS = getattr(redis.client, 'BasePipeline', redis.client.Pipeline)
+
 
 def decode_msgpack(obj):
     # TODO: Convert datetime objects back
@@ -169,7 +173,7 @@ class ScriptRegistry(object):
 
         # Ensure the script is loaded for pipelining
         # XXX This makes assumptions on the client library
-        if isinstance(client, redis.client.BasePipeline):
+        if isinstance(client, PIPELINE_CLASS):
             cmd_exec = client.immediate_execute_command
         else:
             cmd_exec = client.execute_command
