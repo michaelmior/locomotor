@@ -19,7 +19,7 @@ def get_many(redis, count):
     for i in range(count):
         values.append(redis.get('KEY' + str(i)))
 
-return values
+    return values
 ```
 
 In this case, note that the parameter identifying the Redis server object was manually specified.
