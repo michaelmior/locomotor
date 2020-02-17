@@ -661,6 +661,22 @@ class RedisFuncFragment(object):
         # End the outer loop
         code.append(LuaLine('end', [], indent))
 
+    def process_While(self, node, code, indent, loops):
+        """Generate code for a while loop"""
+        # Generate code for the test expression
+        test = self.process_node(node.test).code
+
+        # Add a line for test
+        line = 'while %s do' % test
+        code.append(LuaLine(line, node, indent))
+
+        # Add all statements in the body
+        for n in node.body:
+            code.append(self.process_node(n, indent + 1, loops))
+
+        # End the outer loop
+        code.append(LuaLine('end', [], indent))
+
     def process_If(self, node, code, indent, loops):
         """Generate code for an if statement"""
         # Generate code for the test expression
