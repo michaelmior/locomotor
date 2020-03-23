@@ -35,14 +35,20 @@ def identify_redis_objs(func):
 
     redis_func_objs = []
     nonredis_func_objs = []
-    func_ast = sully.get_func_ast(func)
+
+    if type(func) is list:
+        REDIS_METHOD_COUNT = 1
+        func_ast = func
+    else:
+        REDIS_METHOD_COUNT = 2
+        func_ast = sully.get_func_ast(func)
+
     node_walkers = (ast.walk(func_node) for func_node in func_ast)
     for node in itertools.chain.from_iterable(node_walkers):
         # Skip any nodes which are not function calls on objects
         if not (isinstance(node, ast.Call) and
                 isinstance(node.func, ast.Attribute)):
             continue
-
         # Record all function calls
         if node.func.attr in REDIS_METHODS:
             redis_func_objs.append(node.func.value)
