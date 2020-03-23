@@ -3,7 +3,7 @@ import sys
 import time
 
 sys.path.insert(0, '.')
-from locomotor import redis_server
+from locomotor import *
 
 sys.path.insert(0, 'vendor/pytpcc')
 sys.path.insert(0, 'vendor/pytpcc/pytpcc')
@@ -33,7 +33,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
     @redis_server
     def _doDelivery(self, rdr, wtr, params) :
         if self.debug['delivery'] != 'None' :
-            print 'TXN DELIVERY STARTING ------------------'
+            print('TXN DELIVERY STARTING ------------------')
             tt = time.time()
         if self.debug['delivery'] == 'Verbose' :
             t0 = tt
@@ -79,7 +79,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         no_o_id = rdr.execute()
 
         if self.debug['delivery'] == 'Verbose' :
-            print 'New Order Query: ', time.time() - t0
+            print('New Order Query: ', time.time() - t0)
             t0 = time.time()
 
         #-----------------------
@@ -104,7 +104,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
         ol_ids = rdr.execute()
 
         if self.debug['delivery'] == 'Verbose' :
-            print 'Get Customer ID Query:', time.time() - t0
+            print('Get Customer ID Query:', time.time() - t0)
             t0 = time.time()
 
         #-----------------------------
@@ -132,7 +132,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
                 ol_total[index] += float(ol_amount)
 
         if self.debug['delivery'] == 'Verbose' :
-            print 'Sum Order Line Query:', time.time() - t0
+            print('Sum Order Line Query:', time.time() - t0)
             t0 = time.time()
 
         for d_id in range(1, constants.DISTRICTS_PER_WAREHOUSE + 1) :	
@@ -152,7 +152,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
             wtr.srem('NEW_ORDER.INDEXES.GETNEWORDER.' + no_si_key, no_key)
 
             if self.debug['delivery'] == 'Verbose' :
-                print 'Delete New Order Query:', time.time() - t0
+                print('Delete New Order Query:', time.time() - t0)
                 t0 = time.time()
 
             #---------------------
@@ -165,7 +165,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
                     )
 
             if self.debug['delivery'] == 'Verbose' :
-                print 'Update Orders Query:', time.time() - t0
+                print('Update Orders Query:', time.time() - t0)
                 t0 = time.time()
 
             #-------------------------
@@ -179,7 +179,7 @@ class PartitionedDriver(redisdriver.RedisDriver):
                         )
 
                 if self.debug['delivery'] == 'Verbose' :
-                    print 'Update Order Line Query:', time.time() - t0
+                    print('Update Order Line Query:', time.time() - t0)
                 t0 = time.time()
         wtr.execute()
 
@@ -211,9 +211,9 @@ class PartitionedDriver(redisdriver.RedisDriver):
         wtr.execute()
 
         if self.debug['delivery'] == 'Verbose' :
-            print 'Update Customer Query:', time.time() - t0
+            print('Update Customer Query:', time.time() - t0)
         if self.debug['delivery'] != 'None' :
-            print 'TXN DELIVERY:', time.time() - tt
+            print('TXN DELIVERY:', time.time() - tt)
 
         return result
     # End doDelivery()
