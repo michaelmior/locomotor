@@ -475,6 +475,8 @@ class RedisFuncFragment(object):
             elif node.func.id == 'len':
                 assert len(node.args) == 1
                 line = '#' + args
+            elif node.func.id == 'print':
+                line = 'print(%s)' % args
             else:
                 # XXX We don't know how to handle this function
                 raise UntranslatableCodeException(node)
