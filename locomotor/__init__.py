@@ -1083,3 +1083,20 @@ def redis_server(method=None, redis_objs=None, minlineno=None, maxlineno=None):
         return functools.update_wrapper(fragment, method)
 
     return decorator(method) if method else decorator
+
+class minMaxVisitor(ast.NodeVisitor):
+    """
+    Ast node visitor to find the max and min line number of the body.
+    Max line number and min line number will be pass to find
+    the in_exprs and out_exprs.
+    """
+    def __init__(self, minValue, maxvalue):
+        self.minlineno = minValue
+        self.maxlineno = maxvalue
+
+    def generic_visit(self, node):
+
+        if hasattr(node, 'lineno'):
+            self.maxlineno = max(node.lineno, self.maxlineno)
+            self.minlineno = min(node.lineno, self.minlineno)
+        ast.NodeVisitor.generic_visit(self, node)
