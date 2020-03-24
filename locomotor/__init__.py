@@ -1,5 +1,5 @@
 import ast
-import byteplay
+from byteplay3 import *
 import collections
 import copy
 import datetime
@@ -10,16 +10,18 @@ import msgpack
 import os
 import re
 import redis
-import sully
+from sully import *
 import time
-
+import types
+import astor
 from .identify import *
+from collections import defaultdict
 
 #: The string literal to use for tabs in generated Lua code
 TAB = '  '
 
 #: Types which should be serialized via msgpack
-PACKED_TYPES = (list, dict, types.NoneType, datetime.datetime)
+PACKED_TYPES = (list, dict, type(None), datetime.datetime)
 
 #: A header added to all generated Lua code
 LUA_HEADER = open(os.path.dirname(__file__) + '/lua/header.lua').read()
@@ -156,7 +158,7 @@ class ScriptRegistry(object):
     @classmethod
     def register_script(cls, client, lua_code):
         script = client.register_script(lua_code)
-        script_id = hashlib.md5(lua_code).hexdigest()
+        script_id = hashlib.md5((str(lua_code).encode('utf-8'))).hexdigest()
         cls.SCRIPTS[script_id] = script
         return script_id
 
@@ -228,7 +230,8 @@ class RedisFuncFragment(object):
 
         # Get argument names
         body_ast = self.taint.func_ast.body[0]
-        self.arg_names = [arg.id for arg in body_ast.args.args]
+
+        self.arg_names = [getattr(arg, 'id', getattr(arg, 'arg', None)) for arg in body_ast.args.args]
 
         # Assume that this is a method if the first argument is self
         # This is obviously brittle, but easy and will probably work
@@ -306,7 +309,7 @@ class RedisFuncFragment(object):
         elif type(value) is str:
             # XXX Lua probably doesn't follow the exact same escaping rules
             #     but this will work for a lot of simple cases
-            return "'" + value.encode('string_escape') + "'"
+            return "'" + str(value.encode('unicode_escape')) + "'"
         else:
             return str(value)
 
@@ -315,7 +318,7 @@ class RedisFuncFragment(object):
 
         try:
             # Try to find this constant in the globals dictionary
-            value = self.taint.func.func_globals[expr[0]]
+            value = self.taint.func.__globals__[expr[0]]
         except KeyError:
             # Otherwise look in the function's closure
             free_idx = self.taint.func.func_code.co_freevars.index(expr[0])
@@ -451,10 +454,6 @@ class RedisFuncFragment(object):
 
     def process_Call(self, node, code, indent, loops):
         """Generate code for a function call"""
-
-        # We don't support positional or keyword arguments
-        if node.starargs or node.kwargs:
-            raise UntranslatableCodeException(node)
 
         raw_args = [self.process_node(n) for n in node.args]
         args = ', '.join(arg.code for arg in raw_args)
@@ -599,7 +598,7 @@ class RedisFuncFragment(object):
         """Generate code for a dictionary literal"""
 
         pairs = ["['__DICT'] = true"]
-        for key, value in itertools.izip(node.keys, node.values):
+        for key, value in itertools.zip_longest(node.keys, node.values):
             key = self.process_node(key).code
             value = self.process_node(value).code
             pairs.append('[%s] = %s' % (key, value))
@@ -833,7 +832,7 @@ class RedisFuncFragment(object):
     def arg_conversion(self, arg):
         """Returns the function used to convert this argument to Lua"""
 
-        if isinstance(arg, (int, long, float)):
+        if isinstance(arg, (int, float)):
             # Convert numbers from string form
             return 'tonumber'
         elif isinstance(arg, PACKED_TYPES):
@@ -1008,7 +1007,7 @@ class RedisFuncFragment(object):
 
         # Replace LOAD_NAME with LOAD_FAST for all function argument
         # And store where we need to splice in the return instruction
-        new_code = byteplay.Code.from_code(script_call)
+        new_code = Code.from_code(script_call)
         linenos = []
         for i, instr in enumerate(new_code.code):
             if instr[0] == byteplay.LOAD_NAME and \
