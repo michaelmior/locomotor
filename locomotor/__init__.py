@@ -720,6 +720,15 @@ class RedisFuncFragment(object):
                ', '.join(self.process_node(n).code for n in node.elts) + '}'
         code.append(LuaLine(line, node, indent))
 
+    def process_NameConstant(self, node, code, indent, loops):
+        """Generate code for a simple variable name"""
+
+        if node.value is None:
+            name = 'nil'
+        else:
+            name = node.value
+        code.append(LuaLine(name, node, indent))
+
     def process_Name(self, node, code, indent, loops):
         """Generate code for a simple variable name"""
 
