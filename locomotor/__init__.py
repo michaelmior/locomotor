@@ -1298,3 +1298,32 @@ def identifyConvertLoops(method, redis_objs, taint):
         index += 1
 
     return taint
+
+def automaticTranslation(method = None , redis_objs = None):
+
+    @functools.wraps(method)
+    def decorator(method):
+
+        # Taint Analysis of the function
+        taint = sully.TaintAnalysis(method)
+
+        # Identifying the type of variables
+        taint = identifyArgumentType(taint)
+
+        # Identify and convert loops to execute Lua script
+        taint = identifyConvertLoops(method, redis_objs, taint)
+
+        # Print the generated source code
+        print(astor.to_source(taint.func_ast))
+
+        # Compile the code ans store it in a dictionary
+        code = compile(taint.func_ast, 'sampleAST', mode='exec')
+        namespace = {}
+        exec(code, namespace)
+
+        # Change the code object of the existing function
+        method.__code__ = namespace[method.__name__].__code__
+
+        return method
+
+    return decorator(method) if method else decorator
