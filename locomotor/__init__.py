@@ -209,6 +209,9 @@ class UntranslatableCodeException(Exception):
         super(UntranslatableCodeException, self).__init__(message)
 
 class RedisFuncFragment(object):
+
+    FRAGMENTS = { } # Store redisFuncFragment which is used for conversion to lua at runtime
+
     def __init__(self, taint, minlineno=None, maxlineno=None,
                  redis_objs=None, helper=False):
         self.taint = taint
@@ -360,6 +363,8 @@ class RedisFuncFragment(object):
             var = self.process_node(var).code
             names = set([name])
             line = '%s = %s;' % (var, value)
+            if name in self.taint.stores:
+                names.remove(name)
             code.append(LuaLine(line, node, indent, names))
 
         if LUA_DEBUG:
@@ -1116,3 +1121,180 @@ def identifyArgumentType(taintFunction):
             taintFunction.variableTypes[arg.arg] = typeOfArgument
 
     return taintFunction
+
+def identifyConvertLoops(method, redis_objs, taint):
+    """ Identify loops having redis call and convert it to Lua """
+    functionDefBodyList = taint.func_ast.body[0].body
+    index = 0
+    newFunctionCount = 1
+
+    for currentNode in functionDefBodyList:
+
+        # Identify loops and check for the redis calls
+        if isinstance(currentNode,ast.For) or isinstance(currentNode,ast.While):
+
+            # Identify redis calls in the body of a loop
+            redisObjs = identify_redis_objs(currentNode.body)
+
+            # Convert code to lua code if there is any redis call
+            if len(redisObjs) > 0:
+
+                # Create Node for the new function
+                arguments = ast.arguments([],None,[], [], None, [])
+
+                functionDef = ast.FunctionDef("newFunction" + str(newFunctionCount) ,arguments,[currentNode],
+                    [], None)
+
+                newNode = ast.fix_missing_locations(ast.Module([functionDef]))
+                newNode.lineno = currentNode.lineno - 1
+
+                # Use node visitor to find the max line number and min line number.
+                # Min and Max line number are used to identify variables that needs
+                # to be passed and return from the function
+                X = minMaxVisitor(currentNode.lineno, -1)
+                X.minlineno = currentNode.lineno
+                X.visit(currentNode)
+
+                in_exprs, out_exprs = sully.block_inout(method, X.minlineno, X.maxlineno)
+
+                # Assign all in_exprs as arguments to the new function
+                for redisObj in redis_objs:
+                    if redisObj in in_exprs:
+                        in_exprs.remove(redisObj)
+                    if redisObj in out_exprs:
+                        out_exprs.remove(redisObj)
+
+                # Function Arguments for a new function definition
+                funcDefArgumentList = []
+
+                # Function Arguments for a new function call
+                callFuncArgumentList = []
+
+                for redisObj in redis_objs:
+                    funcDefArgumentList.append(ast.arg(arg = redisObj, annotation = None))
+                    callFuncArgumentList.append(ast.Name(redisObj, ast.Load()))
+
+                # Arguments for generating Lua code
+                luaCallArgsList = []
+
+                for varName in in_exprs:
+                    # Ignoring constants and class variables.
+                    # e.g ('constants', 'DISTRICTS_PER_WAREHOUSE'), ('self', 'debug')
+                    if not isinstance(varName, tuple):
+                        funcDefArgumentList.append(ast.arg(arg = varName, annotation = None))
+                        callFuncArgumentList.append(ast.Name(varName, ast.Load()))
+                        luaCallArgsList.append(ast.Name(varName, ast.Load()))
+
+                arguments.args = funcDefArgumentList
+                arguments = ast.fix_missing_locations(arguments)
+
+                # Variables that are returned from the function
+                returnValueList = []
+
+                # Variables to be return from the function
+                for varName in out_exprs:
+                    returnValueList.append(ast.Name(varName, ast.Load()))
+
+                returnValue = ast.Return(value=ast.Tuple(elts=returnValueList, ctx=ast.Load()))
+
+                # Add return statement to the body of the function
+                functionDef.body.append(ast.fix_missing_locations(returnValue))
+
+                # Taint Analysis of a new function
+                currentTaint = sully.TaintAnalysis(ast.fix_missing_locations(newNode))
+                currentTaint.stores = in_exprs
+                currentTaint.func = taint.func
+
+                fragment = RedisFuncFragment(currentTaint, redis_objs=[],
+                    minlineno=None, maxlineno=None)
+
+                # Store every new function in a dictionary
+                fragmentID = hashlib.md5(("newFunction" + str(newFunctionCount)).encode('utf-8')).hexdigest()
+
+                # Store fragment in a dictionary using fragmentID
+                RedisFuncFragment.FRAGMENTS[fragmentID] = fragment
+
+                # print("========================Lua Code=============================")
+                # lua_code = fragment.lua_code(ast.Name("redis", ast.Load()),
+                # luaCallArgsList, ast.NameConstant(value=None))
+                # print(lua_code)
+                # print("==============================================================")
+
+                ifNode = ast.If(ast.UnaryOp(op=ast.Not(), operand=ast.Call(func=ast.Name(id='getattr', ctx=ast.Load()),
+                args=[ast.Name(id='newFunction' + str(newFunctionCount), ctx=ast.Load()), ast.Str(s='firstCall'),
+                ast.NameConstant(value=False)], keywords=[])), [], [])
+
+                fragmentAssignment = ast.fix_missing_locations(ast.Assign(targets=[ast.Name(id='fragment', ctx=ast.Store())],
+                value=ast.Subscript(value=ast.Attribute(value=ast.Name(id='RedisFuncFragment', ctx=ast.Load()),
+                attr='FRAGMENTS', ctx=ast.Load()),
+                slice=ast.Index(value=ast.Str(s=fragmentID)), ctx=ast.Load())))
+
+                luaCodeAssignment = ast.fix_missing_locations(ast.Assign(targets=[ast.Name(id='lua_code', ctx=ast.Store())],
+                value=ast.Call(func=ast.Attribute(value=ast.Name(id='fragment', ctx=ast.Load()),
+                attr='lua_code', ctx=ast.Load()),
+                args=[ast.Name(redis_objs[0], ast.Load()), ast.List(elts = luaCallArgsList,
+                ctx = ast.Load()), ast.NameConstant(None)], keywords=[])))
+
+                scriptIdAssignment = ast.fix_missing_locations((ast.Assign(targets=[ast.Name(id='script_id', ctx=ast.Store())],
+                value=ast.Call(func=ast.Attribute(value=ast.Name(id='ScriptRegistry',
+                ctx=ast.Load()), attr='register_script', ctx=ast.Load()),
+                args=[ast.Name(redis_objs[0], ast.Load()),
+                ast.Name(id='lua_code', ctx=ast.Load())], keywords=[]))))
+
+                setScriptId = ast.fix_missing_locations(ast.Expr(value=ast.Call(func=ast.Name(id='setattr', ctx=ast.Load()),
+                args=[ast.Name(id='newFunction' + str(newFunctionCount), ctx=ast.Load()),
+                ast.Str(s='script_id'),
+                ast.Name(id='script_id', ctx=ast.Load())], keywords = [])))
+
+                setFirstCall = ast.fix_missing_locations(ast.Expr(value=ast.Call(func=ast.Name(id='setattr', ctx=ast.Load()),
+                args=[ast.Name(id='newFunction' + str(newFunctionCount), ctx=ast.Load()),
+                ast.Str(s='firstCall'),
+                ast.NameConstant(True)], keywords = [])))
+
+                ifNode.body = [fragmentAssignment, luaCodeAssignment, scriptIdAssignment,
+                    setScriptId, setFirstCall]
+
+                functionDef.body = [ast.fix_missing_locations(ifNode)]
+
+                getExpression = ast.Call(func=ast.Name(id='getattr', ctx=ast.Load()),
+                args=[ast.Name(id='newFunction' + str(newFunctionCount), ctx=ast.Load()),
+                ast.Str(s='script_id')], keywords=[])
+
+                # Call registered Lua script using Script ID
+                callToLua =ast.Return(value=ast.Subscript(value = ast.Call(func=ast.Attribute(value=ast.Name(id='ScriptRegistry',
+                ctx=ast.Load()), attr='run_script', ctx=ast.Load()), args=[ast.Name(id=redis_objs[0], ctx=ast.Load()),
+                getExpression, ast.List(elts = luaCallArgsList, ctx = ast.Load())],
+                keywords=[], starargs=None, kwargs=None), slice=ast.Index(value=ast.Str(s='__value')), ctx=ast.Load()))
+
+                functionDef.body.append(ast.fix_missing_locations(callToLua))
+                taint.func_ast.body[0].body[index] = functionDef
+
+                # Store return values of the calling function
+                storingVariables = []
+
+                for varName in out_exprs:
+                    if taint.variableTypes[varName] ==  ast.List:
+                        storingVariables.append(ast.Subscript(value=ast.Name(id=varName, ctx=ast.Load()),
+                        slice=ast.Slice(lower=None, upper=None, step=None), ctx=ast.Store()))
+                    elif taint.variableTypes[varName] ==  ast.Dict:
+                        dictAssignment = ast.Expr(value=ast.Call(func=ast.Attribute(value=ast.Name(id=varName,
+                        ctx=ast.Load()), attr='update', ctx=ast.Load()),
+                        args=[ast.Name(id= varName + "Temp", ctx=ast.Load())], keywords=[]))
+                        taint.func_ast.body[0].body.insert(index + 1, ast.fix_missing_locations(dictAssignment))
+                        storingVariables.append(ast.Name(varName + "Temp", ast.Store()) )
+                    else:
+                        storingVariables.append(ast.Name(varName, ast.Store()) )
+
+                # Call to a new function and storing return values
+                CallNewFunction = ast.Assign(targets=[ast.List(elts=storingVariables, ctx=ast.Store())],
+                value=ast.Call(func=ast.Name(id="newFunction" + str(newFunctionCount), ctx=ast.Load()),
+                args = callFuncArgumentList,
+                keywords=[], starargs=None, kwargs=None))
+
+                taint.func_ast.body[0].body.insert(index + 1, ast.fix_missing_locations(CallNewFunction))
+
+                newFunctionCount += 1
+
+        index += 1
+
+    return taint
