@@ -1100,3 +1100,19 @@ class minMaxVisitor(ast.NodeVisitor):
             self.maxlineno = max(node.lineno, self.maxlineno)
             self.minlineno = min(node.lineno, self.minlineno)
         ast.NodeVisitor.generic_visit(self, node)
+
+
+
+def identifyArgumentType(taintFunction):
+    """ Identify type of argument """
+    for arg in taintFunction.func_ast.body[0].args.args:
+        if arg.annotation is not None:
+            if arg.annotation.id == 'list':
+                typeOfArgument = ast.List
+            elif arg.annotation.id == 'int' or arg.annotation.id == 'float' or arg.annotation.id == 'long':
+                typeOfArgument = ast.Num
+            elif arg.annotation.id == 'str':
+                typeOfArgument = ast.Str
+            taintFunction.variableTypes[arg.arg] = typeOfArgument
+
+    return taintFunction
