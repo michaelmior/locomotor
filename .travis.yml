@@ -23,7 +23,7 @@ jobs:
     - stage: deploy
       provider: script
       on:
-        branch: master
+        branch: main
       script:
         - make -C docs html
         - ghp-import -n docs/_build/html
