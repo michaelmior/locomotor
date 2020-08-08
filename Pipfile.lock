@@ -60,10 +60,10 @@
         },
         "ghp-import": {
             "hashes": [
-                "sha256:3e924ea720e4e1f82d56753db2154bfb86067472c5830732159c3a4c4fbc75d7"
+                "sha256:df19577f8e6fa3e96a84c5bb95a5040fe2d87c29cb6e99caae12ceb01896c5e7"
             ],
             "index": "pypi",
-            "version": "==0.5.5"
+            "version": "==0.6.0"
         },
         "idna": {
             "hashes": [
@@ -151,6 +151,13 @@
                 "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"
             ],
             "version": "==2.4.7"
+        },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c",
+                "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"
+            ],
+            "version": "==2.8.1"
         },
         "pytz": {
             "hashes": [
