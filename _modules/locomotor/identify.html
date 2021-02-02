@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+
+
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    
+    <title>locomotor.identify &mdash; Locomotor main documentation</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    
+
+<link rel="stylesheet" href="../../_static/css/basicstrap-base.css" type="text/css" />
+<link rel="stylesheet" id="current-theme" href="../../_static/css/bootstrap3/bootswatch-lumen.css" type="text/css" />
+<link rel="stylesheet" id="current-adjust-theme" href="../../_static/css/adjust_theme/bootswatch-lumen.css" type="text/css" />
+
+<link rel="stylesheet" href="../../_static/css/font-awesome.min.css">
+
+<style type="text/css">
+  body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+  }
+</style>
+
+<link rel="stylesheet" href="../../_static/css/basicstrap.css" type="text/css" />
+<link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+<script type="text/javascript">
+  var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:    '../../',
+            VERSION:     'main',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE:  true
+  };
+</script>
+    <script type="text/javascript" src="../../_static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../_static/js/bootstrap3.min.js"></script>
+<script type="text/javascript" src="../../_static/js/jquery.cookie.min.js"></script>
+<script type="text/javascript" src="../../_static/js/basicstrap.js"></script>
+<script type="text/javascript">
+</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="top" title="Locomotor main documentation" href="../../index.html" />
+    <link rel="up" title="locomotor" href="../locomotor.html" /> 
+  </head>
+  <body role="document">
+    <div id="navbar-top" class="navbar navbar-fixed-top navbar-default" role="navigation" aria-label="top navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="../../index.html">Locomotor main documentation</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+
+            
+              <li><a href="../../py-modindex.html" title="Python Module Index" >modules </a></li>
+              <li><a href="../../genindex.html" title="General Index" accesskey="I">index </a></li>
+              <li><a href="../index.html" >Module code</a></li>
+              <li><a href="../locomotor.html" accesskey="U">locomotor</a></li>
+            
+
+            <li class="visible-xs">
+                <form class="search form-search form-inline navbar-form navbar-right sp-searchbox" action="../../search.html" method="get">
+                  <div class="input-append input-group">
+                    <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+                    <span class="input-group-btn">
+                    <input type="submit" class="btn" value="Go" />
+                    </span>
+                  </div>
+                  <input type="hidden" name="check_keywords" value="yes" />
+                  <input type="hidden" name="area" value="default" />
+                </form>
+            </li>
+
+            
+
+          </ul>
+
+        </div>
+      </div>
+    </div>
+    
+
+    <!-- container -->
+    <div class="container-fluid">
+
+      <!-- row -->
+      <div class="row">
+         
+<div class="col-md-3 hidden-xs" id="sidebar-wrapper">
+  <div class="sidebar hidden-xs" role="navigation" aria-label="main navigation">
+<div id="searchbox" role="search">
+  <h3>Quick search</h3>
+  <form class="search form-inline" action="../../search.html" method="get">
+      <div class="input-append input-group">
+        <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+        <span class="input-group-btn">
+        <input type="submit" class="btn" value="Go" />
+        </span>
+      </div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+  </div>
+</div> 
+        
+
+        <div class="col-md-9" id="content-wrapper">
+          <div class="document" role="main">
+            <div class="documentwrapper">
+              <div class="bodywrapper">
+                <div class="body">
+                  
+  <h1>Source code for locomotor.identify</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">ast</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">sully</span>
+<span class="kn">import</span> <span class="nn">types</span>
+
+<span class="c1">#: Method names used when trying to identify Redis client objects</span>
+<span class="n">REDIS_METHODS</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="s1">&#39;blpop&#39;</span><span class="p">,</span> <span class="s1">&#39;brpop&#39;</span><span class="p">,</span> <span class="s1">&#39;brpoplpush&#39;</span><span class="p">,</span> <span class="s1">&#39;decr&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;delete&#39;</span><span class="p">,</span> <span class="s1">&#39;execute&#39;</span><span class="p">,</span> <span class="s1">&#39;exists&#39;</span><span class="p">,</span> <span class="s1">&#39;expire&#39;</span><span class="p">,</span> <span class="s1">&#39;expireat&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="s1">&#39;getbit&#39;</span><span class="p">,</span> <span class="s1">&#39;getset&#39;</span><span class="p">,</span> <span class="s1">&#39;hdel&#39;</span><span class="p">,</span> <span class="s1">&#39;hget&#39;</span><span class="p">,</span> <span class="s1">&#39;hgetall&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;hincrby&#39;</span><span class="p">,</span> <span class="s1">&#39;hkeys&#39;</span><span class="p">,</span> <span class="s1">&#39;hlen&#39;</span><span class="p">,</span> <span class="s1">&#39;hmget&#39;</span><span class="p">,</span> <span class="s1">&#39;hmset&#39;</span><span class="p">,</span> <span class="s1">&#39;hset&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;hsetnx&#39;</span><span class="p">,</span> <span class="s1">&#39;hvals&#39;</span><span class="p">,</span> <span class="s1">&#39;incr&#39;</span><span class="p">,</span> <span class="s1">&#39;lindex&#39;</span><span class="p">,</span> <span class="s1">&#39;linsert&#39;</span><span class="p">,</span> <span class="s1">&#39;llen&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;lpop&#39;</span><span class="p">,</span> <span class="s1">&#39;lpush&#39;</span><span class="p">,</span> <span class="s1">&#39;lpushnx&#39;</span><span class="p">,</span> <span class="s1">&#39;lrange&#39;</span><span class="p">,</span> <span class="s1">&#39;lrem&#39;</span><span class="p">,</span> <span class="s1">&#39;lset&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;ltrim&#39;</span><span class="p">,</span> <span class="s1">&#39;mget&#39;</span><span class="p">,</span> <span class="s1">&#39;move&#39;</span><span class="p">,</span> <span class="s1">&#39;mset&#39;</span><span class="p">,</span> <span class="s1">&#39;mset&#39;</span><span class="p">,</span> <span class="s1">&#39;msetnx&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;persist&#39;</span><span class="p">,</span> <span class="s1">&#39;publish&#39;</span><span class="p">,</span> <span class="s1">&#39;randomkey&#39;</span><span class="p">,</span> <span class="s1">&#39;rename&#39;</span><span class="p">,</span> <span class="s1">&#39;renamenx&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;rpop&#39;</span><span class="p">,</span> <span class="s1">&#39;rpoplpush&#39;</span><span class="p">,</span> <span class="s1">&#39;rpush&#39;</span><span class="p">,</span> <span class="s1">&#39;rpushx&#39;</span><span class="p">,</span> <span class="s1">&#39;sadd&#39;</span><span class="p">,</span> <span class="s1">&#39;scard&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;sdiff&#39;</span><span class="p">,</span> <span class="s1">&#39;sdiffstore&#39;</span><span class="p">,</span> <span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="s1">&#39;setbit&#39;</span><span class="p">,</span> <span class="s1">&#39;setex&#39;</span><span class="p">,</span> <span class="s1">&#39;setnx&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;setrange&#39;</span><span class="p">,</span> <span class="s1">&#39;sinter&#39;</span><span class="p">,</span> <span class="s1">&#39;sinterstore&#39;</span><span class="p">,</span> <span class="s1">&#39;sismember&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;smembers&#39;</span><span class="p">,</span> <span class="s1">&#39;smove&#39;</span><span class="p">,</span> <span class="s1">&#39;sort&#39;</span><span class="p">,</span> <span class="s1">&#39;spop&#39;</span><span class="p">,</span> <span class="s1">&#39;srandmember&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;srem&#39;</span><span class="p">,</span> <span class="s1">&#39;strlen&#39;</span><span class="p">,</span> <span class="s1">&#39;substr&#39;</span><span class="p">,</span> <span class="s1">&#39;sunion&#39;</span><span class="p">,</span> <span class="s1">&#39;sunionstore&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;ttl&#39;</span><span class="p">,</span> <span class="s1">&#39;zadd&#39;</span><span class="p">,</span> <span class="s1">&#39;zcard&#39;</span><span class="p">,</span> <span class="s1">&#39;zincrby&#39;</span><span class="p">,</span> <span class="s1">&#39;zinterstore&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;zrange&#39;</span><span class="p">,</span> <span class="s1">&#39;zrangebyscore&#39;</span><span class="p">,</span> <span class="s1">&#39;zrank&#39;</span><span class="p">,</span> <span class="s1">&#39;zrem&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;zremrangebyrank&#39;</span><span class="p">,</span> <span class="s1">&#39;zrevrange&#39;</span><span class="p">,</span> <span class="s1">&#39;zrevrangebyscore&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;zrevrank&#39;</span><span class="p">,</span> <span class="s1">&#39;zrevscore&#39;</span><span class="p">,</span> <span class="s1">&#39;zunionstore&#39;</span><span class="p">])</span>
+
+<span class="c1">#: The minimum number of methods which must be identified as Redis</span>
+<span class="c1">#: calls to denote an object as corresponding to a Redis client</span>
+<span class="n">REDIS_METHOD_COUNT</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1">#: The percentage of method calls which must match a predefined list</span>
+<span class="n">REDIS_METHOD_PCT</span> <span class="o">=</span> <span class="mf">0.8</span>
+
+
+<div class="viewcode-block" id="identify_redis_objs"><a class="viewcode-back" href="../../locomotor.html#locomotor.identify.identify_redis_objs">[docs]</a><span class="k">def</span> <span class="nf">identify_redis_objs</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Identify objects likely to be used to access Redis in the code&quot;&quot;&quot;</span>
+
+    <span class="n">redis_func_objs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">nonredis_func_objs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">func_ast</span> <span class="o">=</span> <span class="n">sully</span><span class="o">.</span><span class="n">get_func_ast</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="n">node_walkers</span> <span class="o">=</span> <span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">func_node</span><span class="p">)</span> <span class="k">for</span> <span class="n">func_node</span> <span class="ow">in</span> <span class="n">func_ast</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">node_walkers</span><span class="p">):</span>
+        <span class="c1"># Skip any nodes which are not function calls on objects</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Call</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Attribute</span><span class="p">)):</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Record all function calls</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="ow">in</span> <span class="n">REDIS_METHODS</span><span class="p">:</span>
+            <span class="n">redis_func_objs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nonredis_func_objs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="c1"># Loop through all the found function objects to pick</span>
+    <span class="c1"># out the ones we deem to represent Redis interfaces</span>
+    <span class="n">redis_objs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">redis_func_objs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">redis_func_objs</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="c1"># Remove all call nodes matching this object</span>
+        <span class="n">redis_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">redis_func_objs</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">redis_func_objs</span> <span class="o">=</span> <span class="p">[</span><span class="n">obj2</span> <span class="k">for</span> <span class="n">obj2</span> <span class="ow">in</span> <span class="n">redis_func_objs</span>
+                           <span class="k">if</span> <span class="ow">not</span> <span class="n">sully</span><span class="o">.</span><span class="n">nodes_equal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">obj2</span><span class="p">)]</span>
+
+        <span class="n">nonredis_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nonredis_func_objs</span><span class="p">)</span>
+        <span class="n">nonredis_func_objs</span> <span class="o">=</span> <span class="p">[</span><span class="n">obj2</span> <span class="k">for</span> <span class="n">obj2</span> <span class="ow">in</span> <span class="n">nonredis_func_objs</span>
+                              <span class="k">if</span> <span class="ow">not</span> <span class="n">sully</span><span class="o">.</span><span class="n">nodes_equal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">obj2</span><span class="p">)]</span>
+
+        <span class="c1"># If the object meets a threshold of calls for the object</span>
+        <span class="c1"># and a certain percentage of all calls match, record it</span>
+        <span class="n">redis_calls</span> <span class="o">=</span> <span class="n">redis_before</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">redis_func_objs</span><span class="p">)</span>
+        <span class="n">nonredis_calls</span> <span class="o">=</span> <span class="n">nonredis_before</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">nonredis_func_objs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">redis_calls</span> <span class="o">&gt;=</span> <span class="n">REDIS_METHOD_COUNT</span> <span class="ow">and</span> \
+           <span class="p">(</span><span class="n">redis_calls</span> <span class="o">*</span> <span class="mf">1.0</span> <span class="o">/</span>
+               <span class="p">(</span><span class="n">redis_calls</span> <span class="o">+</span> <span class="n">nonredis_calls</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="n">REDIS_METHOD_PCT</span><span class="p">:</span>
+            <span class="n">redis_objs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">redis_objs</span></div>
+
+
+<div class="viewcode-block" id="identify_redis_funcs"><a class="viewcode-back" href="../../locomotor.html#locomotor.identify.identify_redis_funcs">[docs]</a><span class="k">def</span> <span class="nf">identify_redis_funcs</span><span class="p">(</span><span class="n">cls_or_mod</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Identify functions in a class or module which use Redis&quot;&quot;&quot;</span>
+
+    <span class="n">redis_funcs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">cls_or_mod</span><span class="p">):</span>
+        <span class="c1"># Skip things which look private</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">cls_or_mod</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">ClassType</span><span class="p">)):</span>
+            <span class="c1"># Recursively check all classes</span>
+            <span class="n">class_funcs</span> <span class="o">=</span> <span class="n">identify_redis_funcs</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">redis_funcs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">class_funcs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">FunctionType</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">)):</span>
+            <span class="c1"># Identify Redis objects within the function</span>
+            <span class="n">objs</span> <span class="o">=</span> <span class="n">identify_redis_objs</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">objs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">redis_funcs</span><span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">=</span> <span class="n">objs</span>
+
+    <span class="k">return</span> <span class="n">redis_funcs</span></div>
+</pre></div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        
+      </div><!-- /row -->
+
+      <!-- row -->
+      <div class="row footer-relbar">
+<div id="navbar-related" class=" related navbar navbar-default" role="navigation" aria-label="related navigation">
+  <div class="navbar-inner">
+    <ul class="nav navbar-nav ">
+        <li><a href="../../index.html">Locomotor main documentation</a></li>
+    </ul>
+<ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
+      
+        <li><a href="../../py-modindex.html" title="Python Module Index" >modules</a></li>
+        <li><a href="../../genindex.html" title="General Index" >index</a></li>
+        <li><a href="../index.html" >Module code</a></li>
+        <li><a href="../locomotor.html" >locomotor</a></li>
+        <li><a href="#">top</a></li> 
+      
+    </ul>
+  </div>
+</div>
+      </div><!-- /row -->
+
+      <!-- footer -->
+      <footer role="contentinfo">
+          &copy; Copyright 2015, Michael Mior.
+        Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.8.5.
+      </footer>
+      <!-- /footer -->
+
+    </div>
+    <!-- /container -->
+
+  </body>
+</html>
