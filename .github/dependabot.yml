@@ -1,0 +1,15 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "10:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: ghp-import
+    versions:
+    - 1.0.1
+  - dependency-name: sphinx-rtd-theme
+    versions:
+    - 0.5.1
