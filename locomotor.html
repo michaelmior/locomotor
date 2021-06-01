@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+
+
+
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    
+    <title>locomotor package &mdash; Locomotor main documentation</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    
+
+<link rel="stylesheet" href="_static/css/basicstrap-base.css" type="text/css" />
+<link rel="stylesheet" id="current-theme" href="_static/css/bootstrap3/bootswatch-lumen.css" type="text/css" />
+<link rel="stylesheet" id="current-adjust-theme" href="_static/css/adjust_theme/bootswatch-lumen.css" type="text/css" />
+
+<link rel="stylesheet" href="_static/css/font-awesome.min.css">
+
+<style type="text/css">
+  body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+  }
+</style>
+
+<link rel="stylesheet" href="_static/css/basicstrap.css" type="text/css" />
+<link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+<script type="text/javascript">
+  var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:    './',
+            VERSION:     'main',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE:  true
+  };
+</script>
+    <script type="text/javascript" src="_static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/js/bootstrap3.min.js"></script>
+<script type="text/javascript" src="_static/js/jquery.cookie.min.js"></script>
+<script type="text/javascript" src="_static/js/basicstrap.js"></script>
+<script type="text/javascript">
+</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="Locomotor main documentation" href="index.html" />
+    <link rel="prev" title="Welcome to Locomotor’s documentation!" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div id="navbar-top" class="navbar navbar-fixed-top navbar-default" role="navigation" aria-label="top navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="index.html">Locomotor main documentation</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+              <li class="dropdown visible-xs">
+                <a role="button" id="localToc" data-toggle="dropdown" data-target="#" href="#">Table Of Contents <b class="caret"></b></a>
+                <ul class="dropdown-menu localtoc sp-localtoc" role="menu" aria-labelledby="localToc">
+                <ul>
+<li><a class="reference internal" href="#">locomotor package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-locomotor.identify">locomotor.identify module</a></li>
+<li><a class="reference internal" href="#module-locomotor">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+                </ul>
+              </li>
+
+            
+              <li><a href="index.html" title="Welcome to Locomotor’s documentation!" accesskey="P">previous </a></li>
+              <li><a href="py-modindex.html" title="Python Module Index" >modules </a></li>
+              <li><a href="genindex.html" title="General Index" accesskey="I">index </a></li>
+            
+            <li class="visible-xs"><a href="_sources/locomotor.rst.txt" rel="nofollow">Show Source</a></li>
+
+            <li class="visible-xs">
+                <form class="search form-search form-inline navbar-form navbar-right sp-searchbox" action="search.html" method="get">
+                  <div class="input-append input-group">
+                    <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+                    <span class="input-group-btn">
+                    <input type="submit" class="btn" value="Go" />
+                    </span>
+                  </div>
+                  <input type="hidden" name="check_keywords" value="yes" />
+                  <input type="hidden" name="area" value="default" />
+                </form>
+            </li>
+
+            
+
+          </ul>
+
+        </div>
+      </div>
+    </div>
+    
+
+    <!-- container -->
+    <div class="container-fluid">
+
+      <!-- row -->
+      <div class="row">
+         
+<div class="col-md-3 hidden-xs" id="sidebar-wrapper">
+  <div class="sidebar hidden-xs" role="navigation" aria-label="main navigation">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">locomotor package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-locomotor.identify">locomotor.identify module</a></li>
+<li><a class="reference internal" href="#module-locomotor">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to Locomotor’s documentation!</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/locomotor.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" role="search">
+  <h3>Quick search</h3>
+  <form class="search form-inline" action="search.html" method="get">
+      <div class="input-append input-group">
+        <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+        <span class="input-group-btn">
+        <input type="submit" class="btn" value="Go" />
+        </span>
+      </div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+  </div>
+</div> 
+        
+
+        <div class="col-md-9" id="content-wrapper">
+          <div class="document" role="main">
+            <div class="documentwrapper">
+              <div class="bodywrapper">
+                <div class="body">
+                  
+  <div class="section" id="locomotor-package">
+<h1>locomotor package<a class="headerlink" href="#locomotor-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-locomotor.identify">
+<span id="locomotor-identify-module"></span><h2>locomotor.identify module<a class="headerlink" href="#module-locomotor.identify" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="locomotor.identify.REDIS_METHODS">
+<code class="descclassname">locomotor.identify.</code><code class="descname">REDIS_METHODS</code><em class="property"> = set(['append', 'blpop', 'brpop', 'brpoplpush', 'decr', 'delete', 'execute', 'exists', 'expire', 'expireat', 'get', 'getbit', 'getset', 'hdel', 'hget', 'hgetall', 'hincrby', 'hkeys', 'hlen', 'hmget', 'hmset', 'hset', 'hsetnx', 'hvals', 'incr', 'lindex', 'linsert', 'llen', 'lpop', 'lpush', 'lpushnx', 'lrange', 'lrem', 'lset', 'ltrim', 'mget', 'move', 'mset', 'msetnx', 'persist', 'publish', 'randomkey', 'rename', 'renamenx', 'rpop', 'rpoplpush', 'rpush', 'rpushx', 'sadd', 'scard', 'sdiff', 'sdiffstore', 'set', 'setbit', 'setex', 'setnx', 'setrange', 'sinter', 'sinterstore', 'sismember', 'smembers', 'smove', 'sort', 'spop', 'srandmember', 'srem', 'strlen', 'substr', 'sunion', 'sunionstore', 'ttl', 'zadd', 'zcard', 'zincrby', 'zinterstore', 'zrange', 'zrangebyscore', 'zrank', 'zrem', 'zremrangebyrank', 'zrevrange', 'zrevrangebyscore', 'zrevrank', 'zrevscore', 'zunionstore'])</em><a class="headerlink" href="#locomotor.identify.REDIS_METHODS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method names used when trying to identify Redis client objects</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.identify.REDIS_METHOD_COUNT">
+<code class="descclassname">locomotor.identify.</code><code class="descname">REDIS_METHOD_COUNT</code><em class="property"> = 2</em><a class="headerlink" href="#locomotor.identify.REDIS_METHOD_COUNT" title="Permalink to this definition">¶</a></dt>
+<dd><p>The minimum number of methods which must be identified as Redis
+calls to denote an object as corresponding to a Redis client</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.identify.REDIS_METHOD_PCT">
+<code class="descclassname">locomotor.identify.</code><code class="descname">REDIS_METHOD_PCT</code><em class="property"> = 0.8</em><a class="headerlink" href="#locomotor.identify.REDIS_METHOD_PCT" title="Permalink to this definition">¶</a></dt>
+<dd><p>The percentage of method calls which must match a predefined list</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="locomotor.identify.identify_redis_funcs">
+<code class="descclassname">locomotor.identify.</code><code class="descname">identify_redis_funcs</code><span class="sig-paren">(</span><em>cls_or_mod</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor/identify.html#identify_redis_funcs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.identify.identify_redis_funcs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify functions in a class or module which use Redis</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="locomotor.identify.identify_redis_objs">
+<code class="descclassname">locomotor.identify.</code><code class="descname">identify_redis_objs</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor/identify.html#identify_redis_objs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.identify.identify_redis_objs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify objects likely to be used to access Redis in the code</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-locomotor">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-locomotor" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="locomotor.DEBUG_LOG_CHANNEL">
+<code class="descclassname">locomotor.</code><code class="descname">DEBUG_LOG_CHANNEL</code><em class="property"> = 'locomotor-debug'</em><a class="headerlink" href="#locomotor.DEBUG_LOG_CHANNEL" title="Permalink to this definition">¶</a></dt>
+<dd><p>A channel used to push debug messages from Lua scripts</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.FUNC_BUILTINS">
+<code class="descclassname">locomotor.</code><code class="descname">FUNC_BUILTINS</code><em class="property"> = ('append', 'insert', 'join', 'replace')</em><a class="headerlink" href="#locomotor.FUNC_BUILTINS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function names which we assume are builtins</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.LUA_HEADER">
+<code class="descclassname">locomotor.</code><code class="descname">LUA_HEADER</code><em class="property"> = 'redis.replicate_commands()\nlocal __RETVAL = function(value, retval)\n  local __RESULT = {}\n  __RESULT[&quot;__value&quot;] = value\n  __RESULT[&quot;__return&quot;] = retval\n\n  return cmsgpack.pack(__RESULT)\nend\n\nlocal __TRUE = function(expr)\n  local __VAL = expr\n  if not __VAL or __VAL == 0 then\n    return false\n  end\n\n  local __TYPE = type(__VAL)\n  if (__TYPE == &quot;table&quot; or __TYPE == &quot;string&quot;) and #__VAL == 0 then\n      return false\n  else\n      return true\n  end\nend\n\nlocal __OR = function(...)\n    local __VAL = nil\n    for i, v in ipairs(arg) do\n        if __TRUE(v) then\n            return v\n        else\n            __VAL = v\n        end\n    end\n\n    return __VAL\nend\n\nlocal __AND = function(...)\n    local __VAL = nil\n    for i, v in ipairs(arg) do\n        if not __TRUE(v) then\n            return v\n        else\n            __VAL = v\n        end\n    end\n\n    return __VAL\nend\n'</em><a class="headerlink" href="#locomotor.LUA_HEADER" title="Permalink to this definition">¶</a></dt>
+<dd><p>A header added to all generated Lua code</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="locomotor.LuaBlock">
+<em class="property">class </em><code class="descclassname">locomotor.</code><code class="descname">LuaBlock</code><span class="sig-paren">(</span><em>lines=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#LuaBlock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.LuaBlock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="locomotor.LuaBlock.append">
+<code class="descname">append</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#LuaBlock.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.LuaBlock.append" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="locomotor.LuaBlock.code">
+<code class="descname">code</code><a class="headerlink" href="#locomotor.LuaBlock.code" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="locomotor.LuaBlock.extend">
+<code class="descname">extend</code><span class="sig-paren">(</span><em>block</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#LuaBlock.extend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.LuaBlock.extend" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="locomotor.LuaLine">
+<em class="property">class </em><code class="descclassname">locomotor.</code><code class="descname">LuaLine</code><span class="sig-paren">(</span><em>code</em>, <em>node=None</em>, <em>indent=0</em>, <em>names=set([])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#LuaLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.LuaLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="staticmethod">
+<dt id="locomotor.LuaLine.debug">
+<em class="property">static </em><code class="descname">debug</code><span class="sig-paren">(</span><em>message</em>, <em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#LuaLine.debug"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.LuaLine.debug" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.PACKED_TYPES">
+<code class="descclassname">locomotor.</code><code class="descname">PACKED_TYPES</code><em class="property"> = (&lt;type 'list'&gt;, &lt;type 'dict'&gt;, &lt;type 'NoneType'&gt;, &lt;type 'datetime.datetime'&gt;)</em><a class="headerlink" href="#locomotor.PACKED_TYPES" title="Permalink to this definition">¶</a></dt>
+<dd><p>Types which should be serialized via msgpack</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.PIPELINED_CODE">
+<code class="descclassname">locomotor.</code><code class="descname">PIPELINED_CODE</code><em class="property"> = 'local __PIPELINE_RESULTS = {}\n\nlocal __PIPE_ADD = function(key, value)\n  if __PIPELINE_RESULTS[key] == nil then\n    __PIPELINE_RESULTS[key] = {}\n  end\n\n  table.insert(__PIPELINE_RESULTS[key], value)\n  return value\nend\n\nlocal __PIPE_GET = function(key)\n  local RETVAL = __PIPELINE_RESULTS[key]\n  __PIPELINE_RESULTS[key] = {}\n  return RETVAL\nend\n\n'</em><a class="headerlink" href="#locomotor.PIPELINED_CODE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Additional functions for code which uses pipelining</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="locomotor.RedisFuncFragment">
+<em class="property">class </em><code class="descclassname">locomotor.</code><code class="descname">RedisFuncFragment</code><span class="sig-paren">(</span><em>taint</em>, <em>minlineno=None</em>, <em>maxlineno=None</em>, <em>redis_objs=None</em>, <em>helper=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.arg_conversion">
+<code class="descname">arg_conversion</code><span class="sig-paren">(</span><em>arg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.arg_conversion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.arg_conversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the function used to convert this argument to Lua</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.convert_value">
+<code class="descname">convert_value</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.convert_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.convert_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the value to a string representation in Lua</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.get_constant">
+<code class="descname">get_constant</code><span class="sig-paren">(</span><em>expr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.get_constant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.get_constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the value for a constant expression</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.lua_code">
+<code class="descname">lua_code</code><span class="sig-paren">(</span><em>client</em>, <em>args</em>, <em>method_self=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.lua_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.lua_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce the lua code for this script fragment</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Assign">
+<code class="descname">process_Assign</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Assign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for an assignment operation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Attribute">
+<code class="descname">process_Attribute</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Attribute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for an attribute access x.y</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_AugAssign">
+<code class="descname">process_AugAssign</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_AugAssign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_AugAssign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for agumented assignment (e.g. +=)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_BinOp">
+<code class="descname">process_BinOp</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_BinOp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_BinOp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a binary operator</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_BoolOp">
+<code class="descname">process_BoolOp</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_BoolOp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_BoolOp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a boolean operator</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Break">
+<code class="descname">process_Break</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Break"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Break" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a break statement</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Call">
+<code class="descname">process_Call</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a function call</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Compare">
+<code class="descname">process_Compare</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Compare"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Compare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a comparison operation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Continue">
+<code class="descname">process_Continue</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Continue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Continue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a continue statement</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Dict">
+<code class="descname">process_Dict</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a dictionary literal</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Expr">
+<code class="descname">process_Expr</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Expr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Expr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for an expression</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_For">
+<code class="descname">process_For</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_For"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_For" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a for loop</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_If">
+<code class="descname">process_If</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_If"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_If" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for an if statement</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Index">
+<code class="descname">process_Index</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for an index value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_List">
+<code class="descname">process_List</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_List"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_List" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a list constant</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Name">
+<code class="descname">process_Name</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a simple variable name</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Num">
+<code class="descname">process_Num</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Num"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a numberical constant</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Pass">
+<code class="descname">process_Pass</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Pass"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Pass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for <cite>pass</cite></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Print">
+<code class="descname">process_Print</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Print"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Print" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a print statement</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Return">
+<code class="descname">process_Return</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Return"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Return" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a return statement</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Str">
+<code class="descname">process_Str</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a string constant</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Subscript">
+<code class="descname">process_Subscript</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Subscript"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Subscript" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a subscript []</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_Tuple">
+<code class="descname">process_Tuple</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_Tuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_Tuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a tuple constant</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_UnaryOp">
+<code class="descname">process_UnaryOp</code><span class="sig-paren">(</span><em>node</em>, <em>code</em>, <em>indent</em>, <em>loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_UnaryOp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_UnaryOp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a unary operator</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.process_node">
+<code class="descname">process_node</code><span class="sig-paren">(</span><em>node</em>, <em>indent=0</em>, <em>loops=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.process_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.process_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code for a single node at a particular indentation level</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.register_script">
+<code class="descname">register_script</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.register_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.register_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register the script with the client and patch the function code</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.rename_expressions">
+<code class="descname">rename_expressions</code><span class="sig-paren">(</span><em>expressions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.rename_expressions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.rename_expressions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rename all expressions in a list to their appropriate names</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="locomotor.RedisFuncFragment.unpack_args">
+<code class="descname">unpack_args</code><span class="sig-paren">(</span><em>args</em>, <em>start_arg=0</em>, <em>helpers=[]</em>, <em>method_self=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#RedisFuncFragment.unpack_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.RedisFuncFragment.unpack_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate code to unpack arguments with the correct name and type</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="locomotor.ScriptRegistry">
+<em class="property">class </em><code class="descclassname">locomotor.</code><code class="descname">ScriptRegistry</code><a class="reference internal" href="_modules/locomotor.html#ScriptRegistry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.ScriptRegistry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="attribute">
+<dt id="locomotor.ScriptRegistry.SCRIPTS">
+<code class="descname">SCRIPTS</code><em class="property"> = {}</em><a class="headerlink" href="#locomotor.ScriptRegistry.SCRIPTS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="locomotor.ScriptRegistry.register_script">
+<em class="property">classmethod </em><code class="descname">register_script</code><span class="sig-paren">(</span><em>client</em>, <em>lua_code</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#ScriptRegistry.register_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.ScriptRegistry.register_script" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="locomotor.ScriptRegistry.run_script">
+<em class="property">classmethod </em><code class="descname">run_script</code><span class="sig-paren">(</span><em>client</em>, <em>script_id</em>, <em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#ScriptRegistry.run_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.ScriptRegistry.run_script" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.TAB">
+<code class="descclassname">locomotor.</code><code class="descname">TAB</code><em class="property"> = '  '</em><a class="headerlink" href="#locomotor.TAB" title="Permalink to this definition">¶</a></dt>
+<dd><p>The string literal to use for tabs in generated Lua code</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="locomotor.UNPIPELINED_CODE">
+<code class="descclassname">locomotor.</code><code class="descname">UNPIPELINED_CODE</code><em class="property"> = '\nlocal __PIPE_ADD = function(key, value) return value end\n'</em><a class="headerlink" href="#locomotor.UNPIPELINED_CODE" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dummy function to use for code which does not involve pipelining</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="locomotor.UntranslatableCodeException">
+<em class="property">exception </em><code class="descclassname">locomotor.</code><code class="descname">UntranslatableCodeException</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#UntranslatableCodeException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.UntranslatableCodeException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">exceptions.Exception</span></code></p>
+<p>Exception raised when code can’t be translated</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="locomotor.decode_msgpack">
+<code class="descclassname">locomotor.</code><code class="descname">decode_msgpack</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#decode_msgpack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.decode_msgpack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="locomotor.encode_msgpack">
+<code class="descclassname">locomotor.</code><code class="descname">encode_msgpack</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#encode_msgpack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.encode_msgpack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="locomotor.redis_server">
+<code class="descclassname">locomotor.</code><code class="descname">redis_server</code><span class="sig-paren">(</span><em>method=None</em>, <em>redis_objs=None</em>, <em>minlineno=None</em>, <em>maxlineno=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/locomotor.html#redis_server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#locomotor.redis_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a decorator which converts a function to run on the server</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        
+      </div><!-- /row -->
+
+      <!-- row -->
+      <div class="row footer-relbar">
+<div id="navbar-related" class=" related navbar navbar-default" role="navigation" aria-label="related navigation">
+  <div class="navbar-inner">
+    <ul class="nav navbar-nav ">
+        <li><a href="index.html">Locomotor main documentation</a></li>
+    </ul>
+<ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
+      
+        <li><a href="index.html" title="Welcome to Locomotor’s documentation!" >previous</a></li>
+        <li><a href="py-modindex.html" title="Python Module Index" >modules</a></li>
+        <li><a href="genindex.html" title="General Index" >index</a></li>
+        <li><a href="#">top</a></li> 
+      
+    </ul>
+  </div>
+</div>
+      </div><!-- /row -->
+
+      <!-- footer -->
+      <footer role="contentinfo">
+          &copy; Copyright 2015, Michael Mior.
+        Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.8.5.
+      </footer>
+      <!-- /footer -->
+
+    </div>
+    <!-- /container -->
+
+  </body>
+</html>

@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+
+
+
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    
+    <title>locomotor &mdash; Locomotor main documentation</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    
+
+<link rel="stylesheet" href="../_static/css/basicstrap-base.css" type="text/css" />
+<link rel="stylesheet" id="current-theme" href="../_static/css/bootstrap3/bootswatch-lumen.css" type="text/css" />
+<link rel="stylesheet" id="current-adjust-theme" href="../_static/css/adjust_theme/bootswatch-lumen.css" type="text/css" />
+
+<link rel="stylesheet" href="../_static/css/font-awesome.min.css">
+
+<style type="text/css">
+  body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+  }
+</style>
+
+<link rel="stylesheet" href="../_static/css/basicstrap.css" type="text/css" />
+<link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+<script type="text/javascript">
+  var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:    '../',
+            VERSION:     'main',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE:  true
+  };
+</script>
+    <script type="text/javascript" src="../_static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script type="text/javascript" src="../_static/js/bootstrap3.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery.cookie.min.js"></script>
+<script type="text/javascript" src="../_static/js/basicstrap.js"></script>
+<script type="text/javascript">
+</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="Locomotor main documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div id="navbar-top" class="navbar navbar-fixed-top navbar-default" role="navigation" aria-label="top navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="../index.html">Locomotor main documentation</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+
+            
+              <li><a href="../py-modindex.html" title="Python Module Index" >modules </a></li>
+              <li><a href="../genindex.html" title="General Index" accesskey="I">index </a></li>
+              <li><a href="index.html" accesskey="U">Module code</a></li>
+            
+
+            <li class="visible-xs">
+                <form class="search form-search form-inline navbar-form navbar-right sp-searchbox" action="../search.html" method="get">
+                  <div class="input-append input-group">
+                    <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+                    <span class="input-group-btn">
+                    <input type="submit" class="btn" value="Go" />
+                    </span>
+                  </div>
+                  <input type="hidden" name="check_keywords" value="yes" />
+                  <input type="hidden" name="area" value="default" />
+                </form>
+            </li>
+
+            
+
+          </ul>
+
+        </div>
+      </div>
+    </div>
+    
+
+    <!-- container -->
+    <div class="container-fluid">
+
+      <!-- row -->
+      <div class="row">
+         
+<div class="col-md-3 hidden-xs" id="sidebar-wrapper">
+  <div class="sidebar hidden-xs" role="navigation" aria-label="main navigation">
+<div id="searchbox" role="search">
+  <h3>Quick search</h3>
+  <form class="search form-inline" action="../search.html" method="get">
+      <div class="input-append input-group">
+        <input type="text" class="search-query form-control" name="q" placeholder="Search...">
+        <span class="input-group-btn">
+        <input type="submit" class="btn" value="Go" />
+        </span>
+      </div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+  </div>
+</div> 
+        
+
+        <div class="col-md-9" id="content-wrapper">
+          <div class="document" role="main">
+            <div class="documentwrapper">
+              <div class="bodywrapper">
+                <div class="body">
+                  
+  <h1>Source code for locomotor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">ast</span>
+<span class="kn">import</span> <span class="nn">byteplay</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">msgpack</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">redis</span>
+<span class="kn">import</span> <span class="nn">sully</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">.identify</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1">#: The string literal to use for tabs in generated Lua code</span>
+<span class="n">TAB</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span>
+
+<span class="c1">#: Types which should be serialized via msgpack</span>
+<span class="n">PACKED_TYPES</span> <span class="o">=</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">NoneType</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+
+<span class="c1">#: A header added to all generated Lua code</span>
+<span class="n">LUA_HEADER</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/lua/header.lua&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="c1">#: Additional functions for code which uses pipelining</span>
+<span class="n">PIPELINED_CODE</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/lua/pipelined.lua&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="c1">#: A dummy function to use for code which does not involve pipelining</span>
+<span class="n">UNPIPELINED_CODE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">local __PIPE_ADD = function(key, value) return value end</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="c1">#: Function names which we assume are builtins</span>
+<span class="n">FUNC_BUILTINS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="s1">&#39;insert&#39;</span><span class="p">,</span> <span class="s1">&#39;join&#39;</span><span class="p">,</span> <span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+
+<span class="c1">#: A channel used to push debug messages from Lua scripts</span>
+<span class="n">DEBUG_LOG_CHANNEL</span> <span class="o">=</span> <span class="s1">&#39;locomotor-debug&#39;</span>
+
+<span class="c1">#: A flag to control Lua script debug messages</span>
+<span class="c1"># XXX This may result in changed behaviour since printing expressions</span>
+<span class="c1">#     currently may have side effects but this should be fixable</span>
+<span class="n">LUA_DEBUG</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1">#: The class used for pipelined operations</span>
+<span class="c1"># This was updated in v3 of the Redis Python library</span>
+<span class="n">PIPELINE_CLASS</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">redis</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="s1">&#39;BasePipeline&#39;</span><span class="p">,</span> <span class="n">redis</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">Pipeline</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="decode_msgpack"><a class="viewcode-back" href="../locomotor.html#locomotor.decode_msgpack">[docs]</a><span class="k">def</span> <span class="nf">decode_msgpack</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="c1"># TODO: Convert datetime objects back</span>
+    <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<div class="viewcode-block" id="encode_msgpack"><a class="viewcode-back" href="../locomotor.html#locomotor.encode_msgpack">[docs]</a><span class="k">def</span> <span class="nf">encode_msgpack</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">mktime</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">timetuple</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<span class="c1"># A block of Lua code consisting of LuaLine objects</span>
+<div class="viewcode-block" id="LuaBlock"><a class="viewcode-back" href="../locomotor.html#locomotor.LuaBlock">[docs]</a><span class="k">class</span> <span class="nc">LuaBlock</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">lines</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">code</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">code</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LuaBlock.append"><a class="viewcode-back" href="../locomotor.html#locomotor.LuaBlock.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">names</span><span class="p">)</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="LuaBlock.extend"><a class="viewcode-back" href="../locomotor.html#locomotor.LuaBlock.extend">[docs]</a>    <span class="k">def</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">lines</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">names</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span> <span class="o">+</span> \
+               <span class="s1">&#39;[&#39;</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;]&#39;</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;local </span><span class="si">%s</span><span class="s1">;&#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="n">code</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">code</span></div>
+
+
+<span class="c1"># A line of Lua code which knows the line numbers of the corresponding Python</span>
+<div class="viewcode-block" id="LuaLine"><a class="viewcode-back" href="../locomotor.html#locomotor.LuaLine">[docs]</a><span class="k">class</span> <span class="nc">LuaLine</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="nb">set</span><span class="p">()):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node</span> <span class="o">=</span> <span class="n">node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">indent</span> <span class="o">=</span> <span class="n">indent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="n">names</span>
+
+<div class="viewcode-block" id="LuaLine.debug"><a class="viewcode-back" href="../locomotor.html#locomotor.LuaLine.debug">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="c1"># Escape quotes in the message</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Format using arguments if provided</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;string.format(&#39;</span><span class="si">%s</span><span class="s2">&#39;, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> \
+                          <span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;tostring(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">arg</span>
+                                              <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">message</span>
+
+            <span class="c1"># Publish the message to the debug channel</span>
+            <span class="k">return</span> <span class="n">LuaLine</span><span class="p">(</span><span class="s2">&quot;redis.call(&#39;publish&#39;, &#39;</span><span class="si">%s</span><span class="s2">&#39;, </span><span class="si">%s</span><span class="s2">);&quot;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="n">DEBUG_LOG_CHANNEL</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">TAB</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">indent</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span></div>
+
+
+<div class="viewcode-block" id="ScriptRegistry"><a class="viewcode-back" href="../locomotor.html#locomotor.ScriptRegistry">[docs]</a><span class="k">class</span> <span class="nc">ScriptRegistry</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">SCRIPTS</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Register the script and return its ID</span>
+<div class="viewcode-block" id="ScriptRegistry.register_script"><a class="viewcode-back" href="../locomotor.html#locomotor.ScriptRegistry.register_script">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register_script</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">lua_code</span><span class="p">):</span>
+        <span class="n">script</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span><span class="n">lua_code</span><span class="p">)</span>
+        <span class="n">script_id</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">lua_code</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">SCRIPTS</span><span class="p">[</span><span class="n">script_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">script</span>
+        <span class="k">return</span> <span class="n">script_id</span></div>
+
+    <span class="c1"># Execute a pre-registered script</span>
+<div class="viewcode-block" id="ScriptRegistry.run_script"><a class="viewcode-back" href="../locomotor.html#locomotor.ScriptRegistry.run_script">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">run_script</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">script_id</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="c1"># Dump the necessary arguments with msgpack</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">PACKED_TYPES</span><span class="p">):</span>
+                <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">msgpack</span><span class="o">.</span><span class="n">packb</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="n">encode_msgpack</span><span class="p">)</span>
+
+        <span class="c1"># Get the registered script</span>
+        <span class="n">script</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">SCRIPTS</span><span class="p">[</span><span class="n">script_id</span><span class="p">]</span>
+
+        <span class="c1"># Ensure the script is loaded for pipelining</span>
+        <span class="c1"># XXX This makes assumptions on the client library</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">PIPELINE_CLASS</span><span class="p">):</span>
+            <span class="n">cmd_exec</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">immediate_execute_command</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd_exec</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">execute_command</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">script</span><span class="o">.</span><span class="n">sha</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">cmd_exec</span><span class="p">(</span><span class="s1">&#39;SCRIPT&#39;</span><span class="p">,</span> <span class="s1">&#39;EXISTS&#39;</span><span class="p">,</span> <span class="n">script</span><span class="o">.</span><span class="n">sha</span><span class="p">,</span>
+                                          <span class="o">**</span><span class="p">{</span><span class="s1">&#39;parse&#39;</span><span class="p">:</span> <span class="s1">&#39;EXISTS&#39;</span><span class="p">})[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">script</span><span class="o">.</span><span class="n">sha</span> <span class="o">=</span> <span class="n">cmd_exec</span><span class="p">(</span><span class="s1">&#39;SCRIPT&#39;</span><span class="p">,</span> <span class="s1">&#39;LOAD&#39;</span><span class="p">,</span> <span class="n">script</span><span class="o">.</span><span class="n">script</span><span class="p">,</span>
+                                  <span class="o">**</span><span class="p">{</span><span class="s1">&#39;parse&#39;</span><span class="p">:</span> <span class="s1">&#39;LOAD&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Execute the script and unpack the return value</span>
+        <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_exec</span><span class="p">(</span><span class="s1">&#39;EVALSHA&#39;</span><span class="p">,</span> <span class="n">script</span><span class="o">.</span><span class="n">sha</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">retval</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;__return&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="n">msgpack</span><span class="o">.</span><span class="n">unpackb</span><span class="p">(</span><span class="n">retval</span><span class="p">,</span> <span class="n">object_hook</span><span class="o">=</span><span class="n">decode_msgpack</span><span class="p">)</span>
+
+        <span class="c1"># Specify an empty value if none is given</span>
+        <span class="k">if</span> <span class="s1">&#39;__value&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">retval</span><span class="p">:</span>
+            <span class="n">retval</span><span class="p">[</span><span class="s1">&#39;__value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">retval</span></div></div>
+
+
+<div class="viewcode-block" id="UntranslatableCodeException"><a class="viewcode-back" href="../locomotor.html#locomotor.UntranslatableCodeException">[docs]</a><span class="k">class</span> <span class="nc">UntranslatableCodeException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when code can&#39;t be translated&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node</span> <span class="o">=</span> <span class="n">node</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">UntranslatableCodeException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment">[docs]</a><span class="k">class</span> <span class="nc">RedisFuncFragment</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">taint</span><span class="p">,</span> <span class="n">minlineno</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxlineno</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">redis_objs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">helper</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">taint</span> <span class="o">=</span> <span class="n">taint</span>
+        <span class="k">if</span> <span class="n">redis_objs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">redis_objs</span><span class="p">:</span>
+                <span class="c1"># Allow specification as bare names</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">obj</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">obj</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">ast</span><span class="o">.</span><span class="n">Load</span><span class="p">())</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span> <span class="o">=</span> <span class="n">identify_redis_objs</span><span class="p">(</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="p">)</span>
+
+        <span class="c1"># Fail if we don&#39;t have a valid Redis object</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">helper</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">()</span>
+
+        <span class="c1"># Get argument names</span>
+        <span class="n">body_ast</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func_ast</span><span class="o">.</span><span class="n">body</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">arg</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">body_ast</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">args</span><span class="p">]</span>
+
+        <span class="c1"># Assume that this is a method if the first argument is self</span>
+        <span class="c1"># This is obviously brittle, but easy and will probably work</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;self&#39;</span>
+
+        <span class="c1"># Strip the instance and client object parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">:])</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">helpers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">functions_in_range</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># Get the expressions we need to bring in and out of this block</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">minlineno</span><span class="p">:</span>
+            <span class="n">minlineno</span> <span class="o">=</span> <span class="n">body_ast</span><span class="o">.</span><span class="n">minlineno</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">maxlineno</span><span class="p">:</span>
+            <span class="n">maxlineno</span> <span class="o">=</span> <span class="n">body_ast</span><span class="o">.</span><span class="n">maxlineno</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_exprs</span> <span class="o">=</span> <span class="n">sully</span><span class="o">.</span><span class="n">block_inout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func_ast</span><span class="p">,</span>
+                                                          <span class="n">minlineno</span><span class="p">,</span> <span class="n">maxlineno</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minlineno</span> <span class="o">=</span> <span class="n">minlineno</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxlineno</span> <span class="o">=</span> <span class="n">maxlineno</span>
+
+        <span class="c1"># Translate the expressions to a more useful format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="o">.</span><span class="n">difference_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">rename_expressions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">)</span> <span class="ow">and</span> <span class="n">obj</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_exprs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rename_expressions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_exprs</span><span class="p">)</span>
+
+        <span class="c1"># Store helper function data and constants</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">helper</span> <span class="o">=</span> <span class="n">helper</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constants</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Generate the code for the body of the method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">LuaBlock</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func_ast</span><span class="o">.</span><span class="n">body</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">body</span><span class="p">:</span>
+            <span class="c1"># Ignore lines we don&#39;t want to translate</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">lineno</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">minlineno</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">lineno</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxlineno</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">helper</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+
+        <span class="c1"># Initialize the script ID to None, we&#39;ll register it Later</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">script_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="RedisFuncFragment.rename_expressions"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.rename_expressions">[docs]</a>    <span class="k">def</span> <span class="nf">rename_expressions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expressions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rename all expressions in a list to their appropriate names&quot;&quot;&quot;</span>
+
+        <span class="n">outlist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">expr</span> <span class="ow">in</span> <span class="n">expressions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">expr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span>
+                    <span class="c1"># Keep hold of any attributes of self we need</span>
+                    <span class="n">outlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">expr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+                    <span class="c1"># Delete constants we don&#39;t need</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">expr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+                    <span class="c1"># XXX This value is not supported</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">outlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">outlist</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.convert_value"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.convert_value">[docs]</a>    <span class="k">def</span> <span class="nf">convert_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert the value to a string representation in Lua&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;nil&#39;</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="c1"># XXX Lua probably doesn&#39;t follow the exact same escaping rules</span>
+            <span class="c1">#     but this will work for a lot of simple cases</span>
+            <span class="k">return</span> <span class="s2">&quot;&#39;&quot;</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;string_escape&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;&#39;&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.get_constant"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.get_constant">[docs]</a>    <span class="k">def</span> <span class="nf">get_constant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the value for a constant expression&quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Try to find this constant in the globals dictionary</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_globals</span><span class="p">[</span><span class="n">expr</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># Otherwise look in the function&#39;s closure</span>
+            <span class="n">free_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_code</span><span class="o">.</span><span class="n">co_freevars</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">expr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_closure</span><span class="p">[</span><span class="n">free_idx</span><span class="p">]</span><span class="o">.</span><span class="n">cell_contents</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">expr</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_node"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_node">[docs]</a>    <span class="k">def</span> <span class="nf">process_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">loops</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a single node at a particular indentation level&quot;&quot;&quot;</span>
+
+        <span class="n">code</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Call the corresponding method or produce an error</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;process_&#39;</span> <span class="o">+</span> <span class="bp">cls</span><span class="p">)(</span><span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># XXX This type of node is not handled</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">LuaBlock</span><span class="p">(</span><span class="n">code</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Assign"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Assign">[docs]</a>    <span class="k">def</span> <span class="nf">process_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for an assignment operation&quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">targets</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">id</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">Attribute</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Subscript</span><span class="p">))</span> <span class="ow">and</span> \
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+            <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">var</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">name</span><span class="p">])</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> = </span><span class="si">%s</span><span class="s1">;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">names</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;ASSIGNING </span><span class="si">%%</span><span class="s1">s TO </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                                      <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">targets</span><span class="p">),</span>
+                                      <span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Attribute"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Attribute">[docs]</a>    <span class="k">def</span> <span class="nf">process_Attribute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for an attribute access x.y&quot;&quot;&quot;</span>
+
+        <span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="c1"># XXX Assume uppercase values are constants</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="o">!=</span> <span class="s1">&#39;self&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">attr</span><span class="o">.</span><span class="n">isupper</span><span class="p">():</span>
+            <span class="c1"># XXX We&#39;re probably doing some external stuff we can&#39;t handle</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span>
+            <span class="c1"># Access the Lua table corresponding to self</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="s1">&#39;self.&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">attr</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_constant</span><span class="p">((</span><span class="n">obj</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">attr</span><span class="p">))</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_AugAssign"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_AugAssign">[docs]</a>    <span class="k">def</span> <span class="nf">process_AugAssign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for agumented assignment (e.g. +=)&quot;&quot;&quot;</span>
+
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Add</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> = </span><span class="si">%s</span><span class="s1"> + </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX Some unhandled operator</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_BinOp"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_BinOp">[docs]</a>    <span class="k">def</span> <span class="nf">process_BinOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a binary operator&quot;&quot;&quot;</span>
+
+        <span class="n">op1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+        <span class="n">op2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Add</span><span class="p">):</span>
+            <span class="n">int_add</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Call</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">)</span> \
+                        <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;float&#39;</span><span class="p">):</span>
+                    <span class="n">int_add</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Guess if either operand is a number</span>
+            <span class="c1"># XXX This will fail if we add two numerical variables</span>
+            <span class="k">if</span> <span class="n">int_add</span> <span class="ow">or</span> <span class="n">op1</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">or</span> <span class="n">op2</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; + &#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; .. &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Sub</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; - &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Mod</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; % &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Mult</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; * &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Div</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; / &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Pow</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; ^ &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX Some unhandled operator</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="n">op1</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="n">op2</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_BoolOp"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_BoolOp">[docs]</a>    <span class="k">def</span> <span class="nf">process_BoolOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a boolean operator&quot;&quot;&quot;</span>
+
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">code</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Or</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;__OR&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">And</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;__AND&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX Some unhandled operator</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">values</span><span class="p">))</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Call"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Call">[docs]</a>    <span class="k">def</span> <span class="nf">process_Call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a function call&quot;&quot;&quot;</span>
+
+        <span class="c1"># We don&#39;t support positional or keyword arguments</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">starargs</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">kwargs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">raw_args</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">]</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">arg</span><span class="o">.</span><span class="n">code</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">raw_args</span><span class="p">)</span>
+
+        <span class="c1"># Handle some built-in functions</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;float&#39;</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;tonumber(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">args</span>
+            <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;str&#39;</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;tostring(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">args</span>
+            <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;range&#39;</span><span class="p">,</span> <span class="s1">&#39;xrange&#39;</span><span class="p">):</span>
+                <span class="c1"># Extend to always use three arguments</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">args</span> <span class="o">=</span> <span class="s1">&#39;0, </span><span class="si">%s</span><span class="s1"> - 1, 1&#39;</span> <span class="o">%</span> <span class="n">args</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">args</span> <span class="o">+=</span> <span class="s1">&#39; - 1, 1&#39;</span>
+
+                <span class="n">line</span> <span class="o">=</span> <span class="n">args</span>
+            <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;len&#39;</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;#&#39;</span> <span class="o">+</span> <span class="n">args</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># XXX We don&#39;t know how to handle this function</span>
+                <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="c1"># XXX We assume now that the function being called is an Attribute</span>
+
+        <span class="c1"># Get the current time for time.time()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Attribute</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;time&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;((function() local __TIME = redis.call(&quot;TIME&quot;); &#39;</span> \
+                   <span class="s1">&#39;return __TIME[1] + (__TIME[2] / 1000000) end)())&#39;</span>
+
+        <span class="c1"># Perform string replacement</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;replace&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;((function() local __TEMP, _; &#39;</span> \
+                   <span class="s1">&#39;__TEMP, _ = string.gsub(</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">); &#39;</span> \
+                   <span class="s1">&#39;return __TEMP end)())&#39;</span> \
+                   <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+        <span class="c1"># Join a table of strings</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;join&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;table.concat(</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                   <span class="o">%</span> <span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+        <span class="c1"># If we&#39;re calling append, add to the end of a list</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;append&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;table.insert(</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)&#39;</span> \
+                   <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+        <span class="c1"># If we&#39;re calling insert, add to the appropriate list position</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;insert&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;table.insert(</span><span class="si">%s</span><span class="s1">, </span><span class="si">%s</span><span class="s1"> + 1, </span><span class="si">%s</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                   <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span><span class="p">,</span>
+                      <span class="n">raw_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="n">raw_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+        <span class="c1"># Check if we have a method call</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;self.&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+        <span class="c1"># XXX Assume this is a Redis pipeline execution</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;pipe&#39;</span><span class="p">:</span>
+            <span class="c1"># Do nothing to start a pipeline</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;execute&#39;</span><span class="p">:</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;__PIPE_GET(</span><span class="se">\&#39;</span><span class="si">%s</span><span class="se">\&#39;</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">expr</span>
+
+        <span class="c1"># XXX Otherwise, assume this is a redis function call</span>
+        <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">sully</span><span class="o">.</span><span class="n">nodes_equal</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">):</span>
+            <span class="c1"># Generate the Redis function call expression</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span>
+            <span class="k">if</span> <span class="n">cmd</span> <span class="o">==</span> <span class="s1">&#39;delete&#39;</span><span class="p">:</span>
+                <span class="n">cmd</span> <span class="o">=</span> <span class="s1">&#39;del&#39;</span>
+            <span class="n">call</span> <span class="o">=</span> <span class="s1">&#39;redis.call(</span><span class="se">\&#39;</span><span class="si">%s</span><span class="se">\&#39;</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+            <span class="c1"># Wrap the Redis call in a function which stores the</span>
+            <span class="c1"># result if needed later for pipelining and returns it</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;__PIPE_ADD(</span><span class="se">\&#39;</span><span class="si">%s</span><span class="se">\&#39;</span><span class="s1">, </span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">call</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX Something we can&#39;t handle</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Compare"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Compare">[docs]</a>    <span class="k">def</span> <span class="nf">process_Compare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a comparison operation&quot;&quot;&quot;</span>
+
+        <span class="c1"># XXX We only handle a single comparison</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">comparators</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">lhs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">Eq</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; == &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">NotEq</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; ~= &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">Gt</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; &gt; &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">GtE</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; &gt;= &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">Lt</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; &lt; &#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">LtE</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39; &lt;= &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX We don&#39;t handle this type of comparison</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">rhs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">comparators</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">code</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">rhs</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Break"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Break">[docs]</a>    <span class="k">def</span> <span class="nf">process_Break</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a break statement&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;LOOP BREAK&#39;</span><span class="p">))</span>
+
+        <span class="c1"># Set the break flag for the current loop</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;__BREAK</span><span class="si">%d</span><span class="s1"> = true&#39;</span> <span class="o">%</span> <span class="n">loops</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;do break end&#39;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Continue"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Continue">[docs]</a>    <span class="k">def</span> <span class="nf">process_Continue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a continue statement&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;LOOP CONTINUE&#39;</span><span class="p">))</span>
+
+        <span class="c1"># We use the hack below of nested loops to implement continue,</span>
+        <span class="c1"># so we just break out of that inner loop here</span>
+        <span class="c1"># http://stackoverflow.com/a/25781200/123695</span>
+        <span class="c1"># We have to embed this in a dummy conditional since for syntactic</span>
+        <span class="c1"># reasons, break must always be the last statement in a block</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;if true then break end&#39;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Dict"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Dict">[docs]</a>    <span class="k">def</span> <span class="nf">process_Dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a dictionary literal&quot;&quot;&quot;</span>
+
+        <span class="n">pairs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;[&#39;__DICT&#39;] = true&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">izip</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">keys</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">values</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+            <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">%s</span><span class="s1">] = </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;({</span><span class="si">%s</span><span class="s1">})&#39;</span> <span class="o">%</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Expr"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Expr">[docs]</a>    <span class="k">def</span> <span class="nf">process_Expr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for an expression&quot;&quot;&quot;</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_For"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_For">[docs]</a>    <span class="k">def</span> <span class="nf">process_For</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a for loop&quot;&quot;&quot;</span>
+
+        <span class="c1"># Get the list we are looping over</span>
+        <span class="n">for_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">iter</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="c1"># Try to find a comma in the list</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">comma_index</span> <span class="o">=</span> <span class="n">for_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">comma_index</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># This is a dumb heuristic and we just propagate this information</span>
+        <span class="c1"># if we were more careful, but we check for a digit followed by</span>
+        <span class="c1"># a comma to see if this is a loop over a range or a list</span>
+        <span class="k">if</span> <span class="n">comma_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">for_list</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">comma_index</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;for </span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1"> do&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">for_list</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;for _, </span><span class="si">%s</span><span class="s1"> in ipairs(</span><span class="si">%s</span><span class="s1">) do&#39;</span> <span class="o">%</span> \
+                   <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">for_list</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;STARTING LOOP OVER </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">for_list</span><span class="p">))</span>
+
+        <span class="c1"># Increment the loop counter and initialize the break flag</span>
+        <span class="n">loops</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;local __BREAK</span><span class="si">%d</span><span class="s1"> = false&#39;</span> <span class="o">%</span> <span class="n">loops</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span>
+
+        <span class="c1"># Add the start of the for statement</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span>
+
+        <span class="c1"># Trigger a break if the flag was set</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;if __BREAK</span><span class="si">%d</span><span class="s1"> then break end&#39;</span> <span class="o">%</span> <span class="n">loops</span><span class="p">,</span>
+            <span class="n">node</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># Add a nested loop with only one iteration</span>
+        <span class="c1"># which will allow us to break out when needed</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;repeat&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># Add all statements in the body</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">body</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="n">loops</span><span class="p">))</span>
+
+        <span class="c1"># End the nested loop from above</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;until true&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># End the outer loop</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;end&#39;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_If"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_If">[docs]</a>    <span class="k">def</span> <span class="nf">process_If</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for an if statement&quot;&quot;&quot;</span>
+        <span class="c1"># Generate code for the test expression</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">test</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;CHECKING CONDITION </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">test</span><span class="p">))</span>
+
+        <span class="c1"># Add a line for the initial test</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;if </span><span class="si">%s</span><span class="s1"> then&#39;</span> <span class="o">%</span> <span class="n">test</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;CONDITION TRUE&#39;</span><span class="p">))</span>
+
+        <span class="c1"># Generate the body of the if block</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">body</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">loops</span><span class="p">))</span>
+
+        <span class="c1"># Generate the body of the else branch</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">orelse</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;else&#39;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;CONDITION FALSE, ELSE&#39;</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">orelse</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">indent</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">loops</span><span class="p">))</span>
+
+        <span class="c1"># Close the if block</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="s1">&#39;end&#39;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Index"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Index">[docs]</a>    <span class="k">def</span> <span class="nf">process_Index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for an index value&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_Expr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_List"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_List">[docs]</a>    <span class="k">def</span> <span class="nf">process_List</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a list constant&quot;&quot;&quot;</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;{&#39;</span> <span class="o">+</span> \
+               <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">code</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">elts</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;}&#39;</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Name"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Name">[docs]</a>    <span class="k">def</span> <span class="nf">process_Name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a simple variable name&quot;&quot;&quot;</span>
+
+        <span class="c1"># Replace common constants (assuming they are not redefined)</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;nil&#39;</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;True&#39;</span><span class="p">,</span> <span class="s1">&#39;False&#39;</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="c1"># Uppercase names are assumed to be constants</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">isupper</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_constant</span><span class="p">((</span><span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="p">,))</span>
+
+            <span class="c1"># Otherwise we assume a local variable</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Num"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Num">[docs]</a>    <span class="k">def</span> <span class="nf">process_Num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a numberical constant&quot;&quot;&quot;</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_value</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Pass"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Pass">[docs]</a>    <span class="k">def</span> <span class="nf">process_Pass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for `pass`&quot;&quot;&quot;</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;do end&#39;</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Print"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Print">[docs]</a>    <span class="k">def</span> <span class="nf">process_Print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a print statement&quot;&quot;&quot;</span>
+
+        <span class="c1"># XXX This changes behaviour to log to Redis instead</span>
+        <span class="c1">#     of print on the application side</span>
+
+        <span class="c1"># We only handle prints to stdout</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">dest</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="c1"># Add a log statement for each print</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;redis.log(redis.LOG_DEBUG, </span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">value</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+                <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;PRINT: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Return"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Return">[docs]</a>    <span class="k">def</span> <span class="nf">process_Return</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a return statement&quot;&quot;&quot;</span>
+
+        <span class="n">retval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="c1"># If this is the final return value, pack it up with cmsgpack</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">helper</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;return </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">retval</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;return __RETVAL(</span><span class="si">%s</span><span class="s1">, true)&#39;</span> <span class="o">%</span> <span class="n">retval</span>
+
+        <span class="k">if</span> <span class="n">LUA_DEBUG</span><span class="p">:</span>
+            <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;RETURNING </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">retval</span><span class="p">))</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Str"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Str">[docs]</a>    <span class="k">def</span> <span class="nf">process_Str</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a string constant&quot;&quot;&quot;</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_value</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Subscript"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Subscript">[docs]</a>    <span class="k">def</span> <span class="nf">process_Subscript</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a subscript []&quot;&quot;&quot;</span>
+
+        <span class="n">subs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">slice</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+        <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+
+        <span class="c1"># Here we check the __DICT property of the object to see if</span>
+        <span class="c1"># it is not a dictionary in which case we add 1 to the index</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">[(</span><span class="si">%s</span><span class="s1">.__DICT) and (</span><span class="si">%s</span><span class="s1">) or (</span><span class="si">%s</span><span class="s1"> + 1)]&#39;</span> <span class="o">%</span> \
+               <span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">expr</span><span class="p">,</span> <span class="n">subs</span><span class="p">,</span> <span class="n">subs</span><span class="p">)</span>
+
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_Tuple"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_Tuple">[docs]</a>    <span class="k">def</span> <span class="nf">process_Tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a tuple constant&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_List</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.process_UnaryOp"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.process_UnaryOp">[docs]</a>    <span class="k">def</span> <span class="nf">process_UnaryOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">indent</span><span class="p">,</span> <span class="n">loops</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code for a unary operator&quot;&quot;&quot;</span>
+
+        <span class="n">operand</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">operand</span><span class="p">)</span><span class="o">.</span><span class="n">code</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">USub</span><span class="p">):</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">UAdd</span><span class="p">):</span>
+            <span class="c1"># XXX We&#39;re assuming that unary addition does nothing</span>
+            <span class="n">op</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Not</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;(not __TRUE(</span><span class="si">%s</span><span class="s1">))&#39;</span> <span class="o">%</span> <span class="n">operand</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># XXX Some unhandled operator</span>
+            <span class="k">raise</span> <span class="n">UntranslatableCodeException</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;(</span><span class="si">%s%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">operand</span><span class="p">)</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LuaLine</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">indent</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.arg_conversion"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.arg_conversion">[docs]</a>    <span class="k">def</span> <span class="nf">arg_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the function used to convert this argument to Lua&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="c1"># Convert numbers from string form</span>
+            <span class="k">return</span> <span class="s1">&#39;tonumber&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">PACKED_TYPES</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;cmsgpack.unpack&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;&#39;</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.unpack_args"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.unpack_args">[docs]</a>    <span class="k">def</span> <span class="nf">unpack_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">start_arg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">helpers</span><span class="o">=</span><span class="p">[],</span>
+                    <span class="n">method_self</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate code to unpack arguments with the correct name and type&quot;&quot;&quot;</span>
+
+        <span class="c1"># Unpack arguments to their original names performing</span>
+        <span class="c1"># any necessary type conversions</span>
+        <span class="c1"># XXX We assume arguments will always have the same type</span>
+        <span class="n">arg_unpacking</span> <span class="o">=</span> <span class="s1">&#39;local self = </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">new_args</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Generate code for all helper functions</span>
+        <span class="n">helper_functions</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">method_name</span> <span class="ow">in</span> <span class="n">helpers</span><span class="p">:</span>
+            <span class="c1"># We can skip Redis calls or calls to what we assume</span>
+            <span class="c1"># are builtin functions</span>
+            <span class="k">if</span> <span class="n">method_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="n">method_name</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">FUNC_BUILTINS</span> <span class="ow">or</span> \
+               <span class="n">method_name</span> <span class="o">==</span> <span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Anything else which is not a call on self is an error</span>
+            <span class="k">if</span> <span class="n">method_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">()</span>
+
+            <span class="c1"># XXX We currently assume that methods called by the method</span>
+            <span class="c1">#     we&#39;re translating do not access any attributes of</span>
+            <span class="c1">#     the instance</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">method_self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">taint</span> <span class="o">=</span> <span class="n">sully</span><span class="o">.</span><span class="n">TaintAnalysis</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+            <span class="n">wrapped</span> <span class="o">=</span> <span class="n">RedisFuncFragment</span><span class="p">(</span><span class="n">taint</span><span class="p">,</span> <span class="n">helper</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Add any newly discovered expressions which are required</span>
+            <span class="k">for</span> <span class="n">in_expr</span> <span class="ow">in</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">in_expr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">arg_names</span> <span class="ow">and</span> \
+                   <span class="n">in_expr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">in_expr</span><span class="p">)</span>
+                    <span class="n">new_args</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># Dump the helper function code into a local variable</span>
+            <span class="n">helper_functions</span> <span class="o">+=</span> <span class="s1">&#39;self.</span><span class="si">%s</span><span class="s1"> = function(</span><span class="si">%s</span><span class="s1">)</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">end</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> \
+                                <span class="p">(</span><span class="n">method_name</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                 <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">wrapped</span><span class="o">.</span><span class="n">arg_names</span><span class="p">),</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">[</span><span class="n">start_arg</span><span class="p">:]):</span>
+            <span class="c1"># Perform the lookup for class variables</span>
+            <span class="c1"># We should be able to extend this to support multiple lookups</span>
+            <span class="c1"># i.e., self.foo.bar</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span>
+                    <span class="n">definition</span> <span class="o">=</span> <span class="s1">&#39;self.</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">arg</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">method_self</span><span class="p">,</span> <span class="n">name</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># XXX This shouldn&#39;t happen yet since we don&#39;t support</span>
+                    <span class="c1">#     accessing things on objects other than self</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">definition</span> <span class="o">=</span> <span class="s1">&#39;local </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">start_arg</span><span class="p">]</span>
+                <span class="n">arg</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">start_arg</span><span class="p">]</span>
+
+            <span class="n">arg_unpacking</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> = </span><span class="si">%s</span><span class="s1">(ARGV[</span><span class="si">%d</span><span class="s1">])</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> \
+                             <span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg_conversion</span><span class="p">(</span><span class="n">arg</span><span class="p">),</span>
+                              <span class="n">i</span> <span class="o">+</span> <span class="n">start_arg</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Track if this is a dictionary so we know if we</span>
+            <span class="c1"># need to add one to indexes into the Lua table</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">expr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">start_arg</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                    <span class="n">expr</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+
+                <span class="n">arg_unpacking</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">.__DICT = true</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">expr</span>
+
+        <span class="c1"># Expand any necessary helper arguments</span>
+        <span class="k">if</span> <span class="n">new_args</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Args is passed through as an empty array since all of them</span>
+            <span class="c1"># must be pulled from method_self anyway</span>
+            <span class="n">helper_unpacking</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unpack_args</span><span class="p">([],</span> <span class="n">start_arg</span> <span class="o">+</span> <span class="n">new_args</span><span class="p">,</span> <span class="p">[],</span>
+                                                <span class="n">method_self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">helper_unpacking</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="n">helper_unpacking</span> <span class="o">+</span> <span class="n">arg_unpacking</span> <span class="o">+</span> <span class="n">helper_functions</span></div>
+
+<div class="viewcode-block" id="RedisFuncFragment.lua_code"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.lua_code">[docs]</a>    <span class="k">def</span> <span class="nf">lua_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">method_self</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Produce the lua code for this script fragment&quot;&quot;&quot;</span>
+
+        <span class="n">body</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+        <span class="c1"># XXX This is dumb but lets us avoid most of the pipelining</span>
+        <span class="c1">#     overhead if we&#39;re sure that it isn&#39;t needed</span>
+        <span class="n">pipeline_code</span> <span class="o">=</span> <span class="n">PIPELINED_CODE</span> <span class="k">if</span> <span class="s1">&#39;__PIPE_GET&#39;</span> <span class="ow">in</span> <span class="n">body</span> \
+            <span class="k">else</span> <span class="n">UNPIPELINED_CODE</span>
+
+        <span class="n">arg_unpacking</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unpack_args</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">helpers</span><span class="p">,</span> <span class="n">method_self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">LUA_HEADER</span> <span class="o">+</span> <span class="n">pipeline_code</span> <span class="o">+</span> <span class="n">arg_unpacking</span> <span class="o">+</span> <span class="n">body</span></div>
+
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">owner</span><span class="p">):</span>
+        <span class="c1"># We need a descriptor here to get the class instance then we</span>
+        <span class="c1"># just stick it as the first argument we pass to __call__</span>
+        <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">inner</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="c1"># Register this script if needed</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">orig_args</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">orig_args</span> <span class="o">=</span> <span class="n">args</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">orig_args</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RedisFuncFragment.register_script"><a class="viewcode-back" href="../locomotor.html#locomotor.RedisFuncFragment.register_script">[docs]</a>    <span class="k">def</span> <span class="nf">register_script</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register the script with the client and patch the function code&quot;&quot;&quot;</span>
+
+        <span class="c1"># Check if this is a method and pull the correct arguments</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">:</span>
+            <span class="n">method_self</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">method_self</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="c1"># Remove the client arguments from what is serialized and</span>
+        <span class="c1"># pick the first client to actually use</span>
+        <span class="c1"># XXX We do not actually support multiple different clients</span>
+        <span class="n">clients</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">[:]:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">redis</span><span class="o">.</span><span class="n">StrictRedis</span><span class="p">):</span>
+                <span class="n">clients</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">clients</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">lua_code</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lua_code</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">method_self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">script_id</span> <span class="o">=</span> <span class="n">ScriptRegistry</span><span class="o">.</span><span class="n">register_script</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">lua_code</span><span class="p">)</span>
+
+        <span class="c1"># Get all the arguments to go to the function</span>
+        <span class="n">arg_exprs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_exprs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">arg_exprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">attr</span><span class="p">))</span>
+
+        <span class="c1"># XXX For now, there can be only one</span>
+        <span class="n">client_arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">redis_objs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">id</span>
+
+        <span class="c1"># Compile code to call our script</span>
+        <span class="c1"># We first store the return value of the script in a temporary</span>
+        <span class="c1"># variable and then check if we&#39;re supposed to return</span>
+        <span class="c1"># __RETURN_HERE__ is a placeholder that we can insert the return</span>
+        <span class="c1"># instruction as &quot;return&quot; is not valid in the current context</span>
+        <span class="n">script_call</span> <span class="o">=</span> <span class="s1">&#39;__RETVAL = ScriptRegistry.run_script&#39;</span> \
+                      <span class="s1">&#39;(</span><span class="si">%s</span><span class="s1">, &quot;</span><span class="si">%s</span><span class="s1">&quot;, [</span><span class="si">%s</span><span class="s1">])</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                      <span class="o">%</span> <span class="p">(</span><span class="n">client_arg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_id</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">arg_exprs</span><span class="p">))</span>
+        <span class="n">script_call</span> <span class="o">+=</span> <span class="s1">&#39;if __RETVAL[&quot;__return&quot;]:</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                       <span class="s1">&#39;    __RETVAL[&quot;__value&quot;]</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                       <span class="s1">&#39;    __RETURN_HERE__</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                       <span class="s1">&#39;for __var, __value in __RETVAL.iteritems():</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                       <span class="s1">&#39;    if not __var.startswith(&quot;__&quot;):</span><span class="se">\n</span><span class="s1">&#39;</span> \
+                       <span class="s1">&#39;        locals()[__var] == __value&#39;</span>
+
+        <span class="n">script_call</span> <span class="o">=</span> <span class="nb">compile</span><span class="p">(</span><span class="n">script_call</span><span class="p">,</span> <span class="s1">&#39;&lt;string&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Replace LOAD_NAME with LOAD_FAST for all function argument</span>
+        <span class="c1"># And store where we need to splice in the return instruction</span>
+        <span class="n">new_code</span> <span class="o">=</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">Code</span><span class="o">.</span><span class="n">from_code</span><span class="p">(</span><span class="n">script_call</span><span class="p">)</span>
+        <span class="n">linenos</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">instr</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_code</span><span class="o">.</span><span class="n">code</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">LOAD_NAME</span> <span class="ow">and</span> \
+                    <span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_code</span><span class="o">.</span><span class="n">co_varnames</span><span class="p">:</span>
+                <span class="n">new_code</span><span class="o">.</span><span class="n">code</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">byteplay</span><span class="o">.</span><span class="n">LOAD_FAST</span><span class="p">,</span> <span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1"># Find where our return instruction should go</span>
+            <span class="k">if</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">LOAD_NAME</span> \
+                    <span class="ow">and</span> <span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;__RETURN_HERE__&#39;</span><span class="p">:</span>
+                <span class="n">return_loc</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">linenos</span><span class="p">)</span>
+
+            <span class="c1"># Track where line numbers appear so we can remove them</span>
+            <span class="c1"># to retain the line numbers from the original function</span>
+            <span class="k">if</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">SetLineno</span><span class="p">:</span>
+                <span class="n">linenos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="c1"># Remove all line number markers</span>
+        <span class="n">removed_lines</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">lineno</span> <span class="ow">in</span> <span class="n">linenos</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">new_code</span><span class="o">.</span><span class="n">code</span><span class="p">[</span><span class="n">lineno</span> <span class="o">-</span> <span class="n">removed_lines</span><span class="p">]</span>
+            <span class="n">removed_lines</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Patch in the return instruction</span>
+        <span class="n">new_code</span><span class="o">.</span><span class="n">code</span><span class="p">[</span><span class="n">return_loc</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span><span class="n">return_loc</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> \
+            <span class="p">[(</span><span class="n">byteplay</span><span class="o">.</span><span class="n">RETURN_VALUE</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
+
+        <span class="c1"># Copy the line number so the first line matches</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">Code</span><span class="o">.</span><span class="n">from_code</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_code</span><span class="p">)</span>
+
+        <span class="c1"># Find the start and line lines where we need to patch in</span>
+        <span class="n">firstline</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">code</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">startline</span> <span class="o">=</span> <span class="n">endline</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">instr</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">code</span><span class="o">.</span><span class="n">code</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">startline</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">SetLineno</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">firstline</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minlineno</span><span class="p">:</span>
+                <span class="n">startline</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">SetLineno</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">firstline</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxlineno</span><span class="p">:</span>
+                <span class="n">endline</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span>
+
+            <span class="c1"># If we haven&#39;t found the end, keep advancing</span>
+            <span class="k">if</span> <span class="n">instr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">byteplay</span><span class="o">.</span><span class="n">SetLineno</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="n">instr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">firstline</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxlineno</span><span class="p">:</span>
+                <span class="n">endline</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="c1"># Patch this into the original function</span>
+        <span class="c1"># We skip the first line since this is an unwanted SetLineno</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">code</span><span class="p">[</span><span class="n">startline</span><span class="p">:</span><span class="n">endline</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_code</span><span class="o">.</span><span class="n">code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_code</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">to_code</span><span class="p">()</span>
+
+        <span class="c1"># Make the ScriptRegistry global available</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">taint</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">func_globals</span><span class="p">[</span><span class="s1">&#39;ScriptRegistry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ScriptRegistry</span></div></div>
+
+
+<div class="viewcode-block" id="redis_server"><a class="viewcode-back" href="../locomotor.html#locomotor.redis_server">[docs]</a><span class="k">def</span> <span class="nf">redis_server</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">redis_objs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">minlineno</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxlineno</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a decorator which converts a function to run on the server&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+        <span class="n">taint</span> <span class="o">=</span> <span class="n">sully</span><span class="o">.</span><span class="n">TaintAnalysis</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="n">fragment</span> <span class="o">=</span> <span class="n">RedisFuncFragment</span><span class="p">(</span><span class="n">taint</span><span class="p">,</span> <span class="n">redis_objs</span><span class="o">=</span><span class="n">redis_objs</span><span class="p">,</span>
+                                     <span class="n">minlineno</span><span class="o">=</span><span class="n">minlineno</span><span class="p">,</span> <span class="n">maxlineno</span><span class="o">=</span><span class="n">maxlineno</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">update_wrapper</span><span class="p">(</span><span class="n">fragment</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">decorator</span><span class="p">(</span><span class="n">method</span><span class="p">)</span> <span class="k">if</span> <span class="n">method</span> <span class="k">else</span> <span class="n">decorator</span></div>
+</pre></div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        
+      </div><!-- /row -->
+
+      <!-- row -->
+      <div class="row footer-relbar">
+<div id="navbar-related" class=" related navbar navbar-default" role="navigation" aria-label="related navigation">
+  <div class="navbar-inner">
+    <ul class="nav navbar-nav ">
+        <li><a href="../index.html">Locomotor main documentation</a></li>
+    </ul>
+<ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
+      
+        <li><a href="../py-modindex.html" title="Python Module Index" >modules</a></li>
+        <li><a href="../genindex.html" title="General Index" >index</a></li>
+        <li><a href="index.html" >Module code</a></li>
+        <li><a href="#">top</a></li> 
+      
+    </ul>
+  </div>
+</div>
+      </div><!-- /row -->
+
+      <!-- footer -->
+      <footer role="contentinfo">
+          &copy; Copyright 2015, Michael Mior.
+        Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.8.5.
+      </footer>
+      <!-- /footer -->
+
+    </div>
+    <!-- /container -->
+
+  </body>
+</html>
